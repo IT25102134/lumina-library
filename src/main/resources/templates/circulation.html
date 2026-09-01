@@ -1,0 +1,14 @@
+<!DOCTYPE html><html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Circulation')}"></head><body>
+<aside th:replace="~{fragments/layout :: sidebar('circulation')}"></aside><div class="app-shell">
+<header th:replace="~{fragments/layout :: topbar('Circulation desk','Loans & returns')}"></header><main class="content">
+<div th:replace="~{fragments/layout :: flashes}"></div>
+<section class="panel" style="margin-bottom:20px"><div class="panel-head"><h2>Borrow requests</h2><span class="status requested" th:text="${#lists.size(requests)}+' waiting'">0 waiting</span></div>
+<div class="table-wrap"><table class="data-table"><thead><tr><th>Member</th><th>Book / copy</th><th>Requested</th><th>Eligibility</th><th>Action</th></tr></thead><tbody>
+<tr th:each="loan:${requests}"><td><b th:text="${loan.member.fullName}">Member</b><br><small class="muted" th:text="${loan.member.membershipNumber}">Number</small></td><td><b th:text="${loan.copy.book.title}">Book</b><br><small class="muted" th:text="${loan.copy.barcode}">Copy</small></td><td th:text="${#temporals.format(loan.requestedAt,'dd MMM · HH:mm')}">Date</td><td><span class="status active">Eligible</span></td><td><div class="inline-form"><form th:action="@{/circulation/{id}/issue(id=${loan.id})}" method="post"><button class="btn btn-amber btn-sm">Issue</button></form><form th:action="@{/circulation/{id}/reject(id=${loan.id})}" method="post" data-confirm="Reject this request?"><button class="btn btn-outline btn-sm">Decline</button></form></div></td></tr>
+<tr th:if="${#lists.isEmpty(requests)}"><td colspan="5" class="empty-state"><strong>Desk is clear</strong>No borrow requests are waiting.</td></tr></tbody></table></div></section>
+<section class="panel"><div class="panel-head"><h2>Books currently out</h2><span class="muted" th:text="${#lists.size(currentLoans)}+' active loans'">0</span></div>
+<div class="table-wrap"><table class="data-table"><thead><tr><th>Book</th><th>Member</th><th>Issued</th><th>Due</th><th>Status</th><th>Return</th></tr></thead><tbody>
+<tr th:each="loan:${currentLoans}"><td><b th:text="${loan.copy.book.title}">Book</b><br><small class="muted" th:text="${loan.copy.barcode}">Copy</small></td><td th:text="${loan.member.fullName}">Member</td><td th:text="${#temporals.format(loan.issuedAt,'dd MMM')}">Date</td><td th:text="${#temporals.format(loan.dueAt,'dd MMM yyyy')}">Due</td><td><span class="status" th:classappend="${#strings.toLowerCase(loan.status.name())}" th:text="${loan.status}">Status</span></td><td><form th:action="@{/circulation/{id}/return(id=${loan.id})}" method="post"><button class="btn btn-ink btn-sm">Check in</button></form></td></tr>
+<tr th:if="${#lists.isEmpty(currentLoans)}"><td colspan="6" class="empty-state"><strong>No active loans</strong>Issued books will appear here.</td></tr></tbody></table></div></section>
+</main></div></body></html>

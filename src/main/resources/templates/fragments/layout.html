@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#071b22">
+    <title th:text="${title} + ' · Lumina Library'">Lumina Library</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <script defer th:src="@{/js/app.js}"></script>
+</head>
+<body>
+<aside class="sidebar" th:fragment="sidebar(active)">
+    <a class="brand" th:href="@{/dashboard}"><span class="brand-mark">L</span><span><b>Lumina</b><small>Public Library</small></span></a>
+    <nav class="nav-stack">
+        <a th:href="@{/dashboard}" th:classappend="${active=='dashboard'}?'active'"><span>⌂</span>Overview</a>
+        <a sec:authorize="hasAnyRole('HEAD_LIBRARIAN','MEMBER')" th:href="@{/catalog}" th:classappend="${active=='catalog'}?'active'"><span>▤</span>Catalogue</a>
+        <a sec:authorize="hasRole('MEMBER')" th:href="@{/my-library}" th:classappend="${active=='my-library'}?'active'"><span>◫</span>My Library</a>
+        <a sec:authorize="hasAnyRole('CIRCULATION_STAFF','HEAD_LIBRARIAN')" th:href="@{/circulation}" th:classappend="${active=='circulation'}?'active'"><span>⇄</span>Circulation</a>
+        <a sec:authorize="hasRole('LIBRARY_ASSISTANT')" th:href="@{/inventory}" th:classappend="${active=='inventory'}?'active'"><span>◇</span>Inventory</a>
+        <a sec:authorize="hasAnyRole('EVENT_COORDINATOR','HEAD_LIBRARIAN','MEMBER')" th:href="@{/events}" th:classappend="${active=='events'}?'active'"><span>◉</span>Events</a>
+        <a sec:authorize="hasRole('MEMBER')" th:href="@{/feedback}" th:classappend="${active=='feedback'}?'active'"><span>○</span>Feedback</a>
+        <a sec:authorize="hasAnyRole('LIBRARY_MANAGER','HEAD_LIBRARIAN')" th:href="@{/feedback/manage}" th:classappend="${active=='feedback-manage'}?'active'"><span>◎</span>Cases</a>
+        <a sec:authorize="hasAnyRole('HEAD_LIBRARIAN','LIBRARY_MANAGER','CIRCULATION_STAFF','LIBRARY_ASSISTANT','EVENT_COORDINATOR')" th:href="@{/reports}" th:classappend="${active=='reports'}?'active'"><span>⌁</span>Reports</a>
+        <a sec:authorize="hasAnyRole('HEAD_LIBRARIAN','LIBRARY_MANAGER')" th:href="@{/audit}" th:classappend="${active=='audit'}?'active'"><span>⌾</span>Audit log</a>
+        <a sec:authorize="hasAnyRole('HEAD_LIBRARIAN','LIBRARY_MANAGER')" th:href="@{/users}" th:classappend="${active=='users'}?'active'"><span>♙</span>Users & roles</a>
+    </nav>
+    <div class="sidebar-user">
+        <div class="avatar" th:text="${#strings.substring(currentUser.firstName,0,1)}">M</div>
+        <div><b th:text="${currentUser.fullName}">Member</b><small th:text="${currentUser.role.displayName}">Role</small></div>
+        <form th:action="@{/logout}" method="post"><button title="Sign out" class="icon-btn">↗</button></form>
+    </div>
+</aside>
+
+<header class="topbar" th:fragment="topbar(title,eyebrow)">
+    <button class="menu-toggle" data-menu>☰</button>
+    <div><small th:text="${eyebrow}">Workspace</small><h1 th:text="${title}">Dashboard</h1></div>
+    <div class="top-actions"><a class="notification-link" th:href="@{/dashboard}" aria-label="Notifications">♢<span th:if="${unreadCount>0}" th:text="${unreadCount}">1</span></a><a class="avatar" th:href="@{/profile}" th:text="${#strings.substring(currentUser.firstName,0,1)}">M</a></div>
+</header>
+
+<div th:fragment="flashes" class="flash-wrap">
+    <div th:if="${success}" class="flash success" th:text="${success}"></div>
+    <div th:if="${error}" class="flash error" th:text="${error}"></div>
+</div>
+</body></html>
