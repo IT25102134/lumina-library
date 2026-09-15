@@ -29,12 +29,16 @@ class LibraryApplicationTests {
     }
 
     @Test @WithMockUser(username="head@lumina.lk",roles="HEAD_LIBRARIAN")
-    void headLibrarianPagesRender() throws Exception {
+    void headLibrarianOnlyHasCatalogueManagement() throws Exception {
         mvc.perform(get("/dashboard")).andExpect(status().isOk());
         mvc.perform(get("/catalog")).andExpect(status().isOk()).andExpect(content().string(containsString("A Tale of Two Cities")));
         mvc.perform(get("/catalog/manage/new")).andExpect(status().isOk());
-        mvc.perform(get("/reports")).andExpect(status().isOk());
-        mvc.perform(get("/audit")).andExpect(status().isOk());
+        mvc.perform(get("/circulation")).andExpect(status().isForbidden());
+        mvc.perform(get("/events/manage/new")).andExpect(status().isForbidden());
+        mvc.perform(get("/feedback/manage")).andExpect(status().isForbidden());
+        mvc.perform(get("/reports")).andExpect(status().isForbidden());
+        mvc.perform(get("/audit")).andExpect(status().isForbidden());
+        mvc.perform(get("/users")).andExpect(status().isForbidden());
     }
 
     @Test @WithMockUser(username="member@lumina.lk",roles="MEMBER")
@@ -56,5 +60,5 @@ class LibraryApplicationTests {
     void eventPagesRender() throws Exception { mvc.perform(get("/events")).andExpect(status().isOk());mvc.perform(get("/events/manage/new")).andExpect(status().isOk()); }
 
     @Test @WithMockUser(username="manager@lumina.lk",roles="LIBRARY_MANAGER")
-    void managerPagesRender() throws Exception { mvc.perform(get("/feedback/manage")).andExpect(status().isOk());mvc.perform(get("/audit")).andExpect(status().isOk());mvc.perform(get("/users")).andExpect(status().isOk()); }
+    void managerPagesRender() throws Exception { mvc.perform(get("/feedback/manage")).andExpect(status().isOk());mvc.perform(get("/reports")).andExpect(status().isOk());mvc.perform(get("/audit")).andExpect(status().isOk());mvc.perform(get("/users")).andExpect(status().isOk()); }
 }
