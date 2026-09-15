@@ -7,5 +7,5 @@
 <form class="panel-body" th:action="@{/events/manage/save}" th:object="${event}" method="post"><input type="hidden" th:field="*{id}"><div class="form-grid">
 <label class="field full">Program title<input th:field="*{title}" required></label><label class="field full">Description<textarea th:field="*{description}" required></textarea></label>
 <label class="field">Location<input th:field="*{location}" required></label><label class="field">Date & time<input th:field="*{startAt}" type="datetime-local" required></label>
-<label class="field">Capacity<input th:field="*{capacity}" type="number" min="1" required></label><label class="field">Publication status<select th:field="*{status}"><option th:each="s:${eventStatuses}" th:value="${s}" th:text="${s}"></option></select></label>
+<label class="field">Capacity<input th:field="*{capacity}" type="number" min="1" required></label>
 </div><div class="form-footer"><a class="btn btn-outline" th:href="@{/events}">Cancel</a><button class="btn btn-amber">Publish program →</button></div></form></section></main></div></body></html>
