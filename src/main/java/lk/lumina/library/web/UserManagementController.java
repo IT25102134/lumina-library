@@ -10,7 +10,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-@Controller @RequestMapping("/users") @PreAuthorize("hasAnyRole('HEAD_LIBRARIAN','LIBRARY_MANAGER')")
+@Controller @RequestMapping("/users") @PreAuthorize("hasRole('LIBRARY_MANAGER')")
 public class UserManagementController {
     private final UserAccountRepository users;private final PasswordEncoder encoder;private final AuditService audit;private final CurrentUserService current;
     public UserManagementController(UserAccountRepository users,PasswordEncoder encoder,AuditService audit,CurrentUserService current){this.users=users;this.encoder=encoder;this.audit=audit;this.current=current;}

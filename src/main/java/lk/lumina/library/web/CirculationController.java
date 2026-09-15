@@ -13,7 +13,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-@Controller @RequestMapping("/circulation") @PreAuthorize("hasAnyRole('CIRCULATION_STAFF','HEAD_LIBRARIAN')")
+@Controller @RequestMapping("/circulation") @PreAuthorize("hasRole('CIRCULATION_STAFF')")
 public class CirculationController {
     private final LoanRepository loans;private final BookCopyRepository copies;private final NotificationRepository notifications;private final FinePaymentRepository fines;private final AuditService audit;private final CurrentUserService current;
     public CirculationController(LoanRepository loans,BookCopyRepository copies,NotificationRepository notifications,FinePaymentRepository fines,AuditService audit,CurrentUserService current){this.loans=loans;this.copies=copies;this.notifications=notifications;this.fines=fines;this.audit=audit;this.current=current;}
