@@ -1,5 +1,6 @@
 package lk.lumina.library.web;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import lk.lumina.library.model.*;
@@ -15,13 +16,24 @@ public class HomeController {
     private final LibraryEventRepository events; private final FeedbackRepository feedback; private final UserAccountRepository users;
     private final NotificationRepository notifications; private final CurrentUserService current;
     public HomeController(BookRepository books,BookCopyRepository copies,LoanRepository loans,LibraryEventRepository events,
-        FeedbackRepository feedback,UserAccountRepository users,NotificationRepository notifications,CurrentUserService current){
+                          FeedbackRepository feedback,UserAccountRepository users,NotificationRepository notifications,CurrentUserService current){
         this.books=books;this.copies=copies;this.loans=loans;this.events=events;this.feedback=feedback;this.users=users;this.notifications=notifications;this.current=current;
     }
     @GetMapping("/") String home(Model model){
         List<Book> featured=books.findByActiveTrueOrderByTitleAsc();
         model.addAttribute("featured",featured.stream().limit(4).toList());
-        model.addAttribute("upcoming",events.findByStatusAndStartAtAfterOrderByStartAtAsc(EventStatus.PUBLISHED,LocalDateTime.now()).stream().limit(2).toList());
+        LocalDate today=LocalDate.now();
+        List<LibraryEvent> published=events.findAllByOrderByStartAtDesc().stream()
+                .filter(e->e.getStatus()==EventStatus.PUBLISHED && e.getStartAt()!=null).toList();
+        List<LibraryEvent> todayEvents=published.stream()
+                .filter(e->e.getStartAt().toLocalDate().isEqual(today))
+                .sorted(Comparator.comparing(LibraryEvent::getStartAt)).toList();
+        List<LibraryEvent> upcomingEvents=published.stream()
+                .filter(e->e.getStartAt().toLocalDate().isAfter(today))
+                .sorted(Comparator.comparing(LibraryEvent::getStartAt)).toList();
+        model.addAttribute("todayEvents",todayEvents);
+        model.addAttribute("upcomingEvents",upcomingEvents);
+        model.addAttribute("upcoming",upcomingEvents);
         return "index";
     }
     @GetMapping("/login") String login(){return "login";}
@@ -36,8 +48,8 @@ public class HomeController {
         model.addAttribute("overdueCount",loans.countByStatusAndDueAtBefore(LoanStatus.ACTIVE,LocalDateTime.now()));
         model.addAttribute("notifications",notifications.findTop8ByRecipientIdOrderByCreatedAtDesc(u.getId()));
         model.addAttribute("recentLoans",(u.getRole()==Role.MEMBER
-            ? loans.findByMemberIdOrderByRequestedAtDesc(u.getId())
-            : loans.findAllByOrderByRequestedAtDesc()).stream().limit(5).toList());
+                ? loans.findByMemberIdOrderByRequestedAtDesc(u.getId())
+                : loans.findAllByOrderByRequestedAtDesc()).stream().limit(5).toList());
         model.addAttribute("upcoming",events.findByStatusAndStartAtAfterOrderByStartAtAsc(EventStatus.PUBLISHED,LocalDateTime.now()).stream().limit(3).toList());
         return "dashboard";
     }

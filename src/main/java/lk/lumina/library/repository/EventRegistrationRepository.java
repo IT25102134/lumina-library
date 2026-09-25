@@ -7,4 +7,5 @@ public interface EventRegistrationRepository extends JpaRepository<EventRegistra
     boolean existsByEventIdAndMemberId(Long eventId,Long memberId);
     List<EventRegistration> findByEventIdOrderByRegisteredAtAsc(Long eventId);
     List<EventRegistration> findByMemberIdOrderByRegisteredAtDesc(Long memberId);
+    void deleteByEventId(Long eventId);
 }

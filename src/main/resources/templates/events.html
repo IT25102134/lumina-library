@@ -1,3 +1,123 @@
-<!DOCTYPE html><html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"><head th:replace="~{fragments/layout :: head('Events')}"></head><body><aside th:replace="~{fragments/layout :: sidebar('events')}"></aside><div class="app-shell"><header th:replace="~{fragments/layout :: topbar('Events & programs','Community calendar')}"></header><main class="content"><div th:replace="~{fragments/layout :: flashes}"></div><div class="page-actions"><p>Workshops, reading circles and moments of shared discovery.</p><a sec:authorize="hasAnyRole('EVENT_COORDINATOR','HEAD_LIBRARIAN')" th:href="@{/events/manage/new}" class="btn btn-amber">＋ Create program</a></div>
-<section class="event-list"><article class="event-card" th:each="event:${events}"><time class="event-date"><strong th:text="${#temporals.format(event.startAt,'dd')}">12</strong><span th:text="${#temporals.format(event.startAt,'MMM yyyy')}">SEP</span><small th:text="${#temporals.format(event.startAt,'HH:mm')}">18:00</small></time><div><div class="inline-form"><span class="status" th:classappend="${#strings.toLowerCase(event.status.name())}" th:text="${event.status}">Published</span><span class="muted" th:text="${counts[event.id]}+'/'+${event.capacity}+' places'">0/30</span></div><h3 th:text="${event.title}">Event title</h3><p th:text="${event.description}">Description</p><div class="event-meta" th:text="'⌖ '+${event.location}">Location</div><div class="card-actions"><form sec:authorize="hasRole('MEMBER')" th:if="${event.status.name()=='PUBLISHED'}" th:action="@{/events/{id}/register(id=${event.id})}" method="post"><button class="btn btn-amber btn-sm">Reserve a place</button></form><a sec:authorize="hasAnyRole('EVENT_COORDINATOR','HEAD_LIBRARIAN')" class="btn btn-outline btn-sm" th:href="@{/events/manage/{id}/edit(id=${event.id})}">Edit program</a></div></div></article></section><div th:if="${#lists.isEmpty(events)}" class="panel empty-state"><strong>No programs scheduled</strong>Create the first gathering for your community.</div>
-</main></div></body></html>
+<!DOCTYPE html><html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"><head th:replace="~{fragments/layout :: head('Events')}"></head><body><aside th:replace="~{fragments/layout :: sidebar('events')}"></aside><div class="app-shell"><header th:replace="~{fragments/layout :: topbar('Events & programs','Community calendar')}"></header><main class="content"><div th:replace="~{fragments/layout :: flashes}"></div>
+    <section class="welcome-card" sec:authorize="hasAnyRole('EVENT_COORDINATOR','HEAD_LIBRARIAN')"><span class="eyebrow"><i></i><span th:text="${currentUser.role.displayName}+' workspace'">Workspace</span></span><h2 th:text="'Good to see you, '+${currentUser.firstName}+'.'">Good to see you.</h2><p th:switch="${currentUser.role.name()}"><span th:case="'EVENT_COORDINATOR'">Create thoughtful programs that turn a library into a community.</span><span th:case="*">Shape the collection and keep community programs discoverable and current.</span></p><div class="quick-actions"><a th:href="@{/events/manage/new}">＋ Create event</a></div></section>
+    <div class="page-actions"><p>Workshops, reading circles and moments of shared discovery.</p></div>
+
+    <div class="catalog-tabs" style="display:flex;gap:10px;margin:20px 0 26px;border-bottom:1px solid var(--line);padding-bottom:14px;flex-wrap:wrap;">
+        <button type="button" class="catalog-tab-btn active" data-target="all" style="padding:8px 18px;border-radius:24px;border:1px solid var(--ink);background:var(--ink);color:#fff;font-weight:600;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">
+            All Catalogs <span style="background:rgba(255,255,255,0.22);color:#fff;padding:2px 8px;border-radius:12px;font-size:10px;" th:text="${#lists.size(events)}">0</span>
+        </button>
+        <button type="button" class="catalog-tab-btn" data-target="today" style="padding:8px 18px;border-radius:24px;border:1px solid var(--line);background:#fff;color:var(--ink);font-weight:600;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">
+            Today Events <span style="background:#dff1e8;color:#27684b;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;" th:text="${#lists.size(todayEvents)}">0</span>
+        </button>
+        <button type="button" class="catalog-tab-btn" data-target="upcoming" style="padding:8px 18px;border-radius:24px;border:1px solid var(--line);background:#fff;color:var(--ink);font-weight:600;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">
+            Upcoming Events <span style="background:#fff0d7;color:#93601c;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;" th:text="${#lists.size(upcomingEvents)}">0</span>
+        </button>
+        <button type="button" class="catalog-tab-btn" data-target="past" style="padding:8px 18px;border-radius:24px;border:1px solid var(--line);background:#fff;color:var(--ink);font-weight:600;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">
+            Past Events <span style="background:#e6e9e8;color:#5b6664;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;" th:text="${#lists.size(pastEvents)}">0</span>
+        </button>
+    </div>
+
+    <section class="catalog-section" id="catalog-today" style="margin-bottom:34px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <h2 style="font:600 22px var(--serif);margin:0;display:flex;align-items:center;gap:9px;"><span style="color:#27684b;font-size:14px;">●</span> Today Events</h2>
+            <span class="status active" th:text="${#lists.size(todayEvents)}+' today'">0 today</span>
+        </div>
+        <div class="event-list" th:if="${!#lists.isEmpty(todayEvents)}">
+            <article class="event-card" th:each="event:${todayEvents}">
+                <time class="event-date"><strong th:text="${#temporals.format(event.startAt,'dd')}">12</strong><span th:text="${#temporals.format(event.startAt,'MMM yyyy')}">SEP</span><small th:text="${#temporals.format(event.startAt,'HH:mm')}">18:00</small></time>
+                <div>
+                    <div class="inline-form"><span class="status" th:classappend="${#strings.toLowerCase(event.status.name())}" th:text="${event.status}">Published</span><span class="muted" th:classappend="${fullyBookedIds.contains(event.id)} ? 'status overdue' : ''" th:text="${counts[event.id]}+'/'+${event.capacity}+' places'" style="font-weight:700;">0/30</span></div>
+                    <h3 th:text="${event.title}">Event title</h3>
+                    <p th:text="${event.description}">Description</p>
+                    <div class="event-meta" th:text="'⌖ '+${event.location}">Location</div>
+                    <div class="card-actions">
+                        <th:block sec:authorize="hasRole('MEMBER')" th:if="${event.status.name()=='PUBLISHED'}">
+                            <span th:if="${registeredEventIds.contains(event.id)}" class="btn btn-sm" style="background:#dff1e8;color:#27684b;border:1px solid #bcdccb;cursor:default;">✓ Registered</span>
+                            <span th:if="${!registeredEventIds.contains(event.id) && fullyBookedIds.contains(event.id)}" class="btn btn-sm" style="background:#f6e1de;color:#9c443d;border:1px solid #e8c0bb;cursor:not-allowed;">⊘ Fully Booked</span>
+                            <form th:if="${!registeredEventIds.contains(event.id) && !fullyBookedIds.contains(event.id)}" th:action="@{/events/{id}/register(id=${event.id})}" method="post"><button class="btn btn-amber btn-sm">Reserve a place</button></form>
+                        </th:block>
+                        <a sec:authorize="hasAnyRole('EVENT_COORDINATOR','HEAD_LIBRARIAN')" class="btn btn-outline btn-sm" th:href="@{/events/manage/{id}/edit(id=${event.id})}">Edit program</a>
+                        <form sec:authorize="hasAnyRole('EVENT_COORDINATOR','HEAD_LIBRARIAN')" th:action="@{/events/manage/{id}/delete(id=${event.id})}" method="post" onsubmit="return confirm('Delete this event and all its registrations?');"><button class="btn btn-outline btn-sm" style="color:#e05c5c;border-color:#e05c5c;">Delete</button></form>
+                    </div>
+                </div>
+            </article>
+        </div>
+        <div th:if="${#lists.isEmpty(todayEvents)}" class="panel empty-state" style="padding:30px;border-radius:7px;"><strong>No events scheduled for today</strong>Check upcoming gatherings below.</div>
+    </section>
+
+    <section class="catalog-section" id="catalog-upcoming" style="margin-bottom:34px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <h2 style="font:600 22px var(--serif);margin:0;display:flex;align-items:center;gap:9px;"><span style="color:#e7a84b;font-size:14px;">●</span> Upcoming Events</h2>
+            <span class="status requested" th:text="${#lists.size(upcomingEvents)}+' upcoming'">0 upcoming</span>
+        </div>
+        <div class="event-list" th:if="${!#lists.isEmpty(upcomingEvents)}">
+            <article class="event-card" th:each="event:${upcomingEvents}">
+                <time class="event-date"><strong th:text="${#temporals.format(event.startAt,'dd')}">12</strong><span th:text="${#temporals.format(event.startAt,'MMM yyyy')}">SEP</span><small th:text="${#temporals.format(event.startAt,'HH:mm')}">18:00</small></time>
+                <div>
+                    <div class="inline-form"><span class="status" th:classappend="${#strings.toLowerCase(event.status.name())}" th:text="${event.status}">Published</span><span class="muted" th:classappend="${fullyBookedIds.contains(event.id)} ? 'status overdue' : ''" th:text="${counts[event.id]}+'/'+${event.capacity}+' places'" style="font-weight:700;">0/30</span></div>
+                    <h3 th:text="${event.title}">Event title</h3>
+                    <p th:text="${event.description}">Description</p>
+                    <div class="event-meta" th:text="'⌖ '+${event.location}">Location</div>
+                    <div class="card-actions">
+                        <th:block sec:authorize="hasRole('MEMBER')" th:if="${event.status.name()=='PUBLISHED'}">
+                            <span th:if="${registeredEventIds.contains(event.id)}" class="btn btn-sm" style="background:#dff1e8;color:#27684b;border:1px solid #bcdccb;cursor:default;">✓ Registered</span>
+                            <span th:if="${!registeredEventIds.contains(event.id) && fullyBookedIds.contains(event.id)}" class="btn btn-sm" style="background:#f6e1de;color:#9c443d;border:1px solid #e8c0bb;cursor:not-allowed;">⊘ Fully Booked</span>
+                            <form th:if="${!registeredEventIds.contains(event.id) && !fullyBookedIds.contains(event.id)}" th:action="@{/events/{id}/register(id=${event.id})}" method="post"><button class="btn btn-amber btn-sm">Reserve a place</button></form>
+                        </th:block>
+                        <a sec:authorize="hasAnyRole('EVENT_COORDINATOR','HEAD_LIBRARIAN')" class="btn btn-outline btn-sm" th:href="@{/events/manage/{id}/edit(id=${event.id})}">Edit program</a>
+                        <form sec:authorize="hasAnyRole('EVENT_COORDINATOR','HEAD_LIBRARIAN')" th:action="@{/events/manage/{id}/delete(id=${event.id})}" method="post" onsubmit="return confirm('Delete this event and all its registrations?');"><button class="btn btn-outline btn-sm" style="color:#e05c5c;border-color:#e05c5c;">Delete</button></form>
+                    </div>
+                </div>
+            </article>
+        </div>
+        <div th:if="${#lists.isEmpty(upcomingEvents)}" class="panel empty-state" style="padding:30px;border-radius:7px;"><strong>No upcoming programs scheduled</strong>New programs will appear here once planned.</div>
+    </section>
+
+    <section class="catalog-section" id="catalog-past" style="margin-bottom:34px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <h2 style="font:600 22px var(--serif);margin:0;display:flex;align-items:center;gap:9px;"><span style="color:var(--muted);font-size:14px;">●</span> Past Events</h2>
+            <span class="status" th:text="${#lists.size(pastEvents)}+' concluded'">0 concluded</span>
+        </div>
+        <div class="event-list" th:if="${!#lists.isEmpty(pastEvents)}">
+            <article class="event-card" th:each="event:${pastEvents}" style="opacity:0.92;">
+                <time class="event-date"><strong th:text="${#temporals.format(event.startAt,'dd')}">12</strong><span th:text="${#temporals.format(event.startAt,'MMM yyyy')}">SEP</span><small th:text="${#temporals.format(event.startAt,'HH:mm')}">18:00</small></time>
+                <div>
+                    <div class="inline-form"><span class="status completed" th:text="${event.status}">Concluded</span><span class="muted" th:text="${counts[event.id]}+'/'+${event.capacity}+' attended'">0/30</span></div>
+                    <h3 th:text="${event.title}">Event title</h3>
+                    <p th:text="${event.description}">Description</p>
+                    <div class="event-meta" th:text="'⌖ '+${event.location}">Location</div>
+                    <div class="card-actions">
+                        <a sec:authorize="hasAnyRole('EVENT_COORDINATOR','HEAD_LIBRARIAN')" class="btn btn-outline btn-sm" th:href="@{/events/manage/{id}/edit(id=${event.id})}">Edit program</a>
+                        <form sec:authorize="hasAnyRole('EVENT_COORDINATOR','HEAD_LIBRARIAN')" th:action="@{/events/manage/{id}/delete(id=${event.id})}" method="post" onsubmit="return confirm('Delete this event and all its registrations?');"><button class="btn btn-outline btn-sm" style="color:#e05c5c;border-color:#e05c5c;">Delete</button></form>
+                    </div>
+                </div>
+            </article>
+        </div>
+        <div th:if="${#lists.isEmpty(pastEvents)}" class="panel empty-state" style="padding:30px;border-radius:7px;"><strong>No past events</strong>Concluded gatherings will automatically archive here.</div>
+    </section>
+
+</main></div>
+<script>
+    document.querySelectorAll('.catalog-tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.catalog-tab-btn').forEach(b => {
+                b.classList.remove('active');
+                b.style.background = '#fff';
+                b.style.color = 'var(--ink)';
+                b.style.borderColor = 'var(--line)';
+            });
+            this.classList.add('active');
+            this.style.background = 'var(--ink)';
+            this.style.color = '#fff';
+            this.style.borderColor = 'var(--ink)';
+            const target = this.getAttribute('data-target');
+            document.querySelectorAll('.catalog-section').forEach(sec => {
+                if (target === 'all' || sec.id === 'catalog-' + target) {
+                    sec.style.display = 'block';
+                } else {
+                    sec.style.display = 'none';
+                }
+            });
+        });
+    });
+</script></body></html>
