@@ -15,6 +15,8 @@ public class FeedbackItem {
     @Column(nullable=false) private LocalDateTime createdAt=LocalDateTime.now();
     private LocalDateTime resolvedAt;
     public FeedbackItem(){}
+
+
     public Long getId(){return id;} public UserAccount getMember(){return member;} public void setMember(UserAccount v){member=v;}
     public FeedbackType getType(){return type;} public void setType(FeedbackType v){type=v;}
     public String getSubject(){return subject;} public void setSubject(String v){subject=v;}

@@ -2,10 +2,20 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Event editor')}"></head>
 <body><aside th:replace="~{fragments/layout :: sidebar('events')}"></aside><div class="app-shell">
-<header th:replace="~{fragments/layout :: topbar('Program editor','Event management')}"></header>
-<main class="content"><section class="panel form-panel"><div class="panel-head"><h2>Program details</h2></div>
-<form class="panel-body" th:action="@{/events/manage/save}" th:object="${event}" method="post"><input type="hidden" th:field="*{id}"><div class="form-grid">
-<label class="field full">Program title<input th:field="*{title}" required></label><label class="field full">Description<textarea th:field="*{description}" required></textarea></label>
-<label class="field">Location<input th:field="*{location}" required></label><label class="field">Date & time<input th:field="*{startAt}" type="datetime-local" required></label>
-<label class="field">Capacity<input th:field="*{capacity}" type="number" min="1" required></label>
-</div><div class="form-footer"><a class="btn btn-outline" th:href="@{/events}">Cancel</a><button class="btn btn-amber">Publish program →</button></div></form></section></main></div></body></html>
+    <header th:replace="~{fragments/layout :: topbar('Program editor','Event management')}"></header>
+    <main class="content"><div th:replace="~{fragments/layout :: flashes}"></div><section class="panel form-panel"><div class="panel-head"><h2>Program details</h2></div>
+        <form class="panel-body" th:action="@{/events/manage/save}" th:object="${event}" method="post"><input type="hidden" th:field="*{id}"><div class="form-grid">
+            <label class="field full">Program title<input th:field="*{title}" required></label><label class="field full">Description<textarea th:field="*{description}" required></textarea></label>
+            <label class="field">Location<input th:field="*{location}" required></label><label class="field">Date & time<input th:field="*{startAt}" id="startAt" type="datetime-local" th:min="${minDateTime}" required></label>
+            <label class="field">Capacity<input th:field="*{capacity}" type="number" min="1" required></label>
+        </div><div class="form-footer"><a class="btn btn-outline" th:href="@{/events}">Cancel</a><button class="btn btn-amber">Publish program →</button></div></form></section></main></div>
+<script>
+    (function() {
+        const input = document.getElementById('startAt') || document.querySelector('input[type="datetime-local"]');
+        if (input) {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            input.min = now.toISOString().slice(0, 16);
+        }
+    })();
+</script></body></html>
