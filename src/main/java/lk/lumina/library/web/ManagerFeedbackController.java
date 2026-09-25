@@ -29,17 +29,28 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
- * Handles the library manager's feedback pages and actions.
+ * Handles feedback actions available to a library manager.
  */
 @Controller
 @RequestMapping("/feedback/manage")
 @PreAuthorize("hasRole('LIBRARY_MANAGER')")
 public class ManagerFeedbackController {
 
+    /**
+     * WITHDRAWN is excluded because only a member can withdraw a case.
+     */
+    private static final List<FeedbackStatus> MANAGER_STATUSES =
+            List.of(
+                    FeedbackStatus.OPEN,
+                    FeedbackStatus.IN_REVIEW,
+                    FeedbackStatus.RESOLVED,
+                    FeedbackStatus.CLOSED
+            );
+
     private final FeedbackService feedbackService;
 
     /**
-     * Spring injects the FeedbackService through the constructor.
+     * Spring injects FeedbackService through the constructor.
      */
     public ManagerFeedbackController(
             FeedbackService feedbackService) {
@@ -48,10 +59,7 @@ public class ManagerFeedbackController {
     }
 
     /**
-     * Displays the manager feedback page.
-     *
-     * The manager can filter cases by type, status,
-     * priority and keyword.
+     * Displays the manager queue with optional search and filters.
      *
      * URL: GET /feedback/manage
      */
@@ -73,102 +81,41 @@ public class ManagerFeedbackController {
             Model model) {
 
         /*
-         * Search cases using the selected filters.
+         * Remove unnecessary spaces from the keyword.
+         */
+        String cleanKeyword =
+                keyword == null
+                        ? ""
+                        : keyword.trim();
+
+        /*
+         * Search active cases using the selected filters.
          */
         List<FeedbackItem> items =
                 feedbackService.searchForManager(
                         type,
                         status,
                         priority,
-                        keyword
+                        cleanKeyword
                 );
 
         /*
-         * Add filtered cases to the page.
+         * Add all data required by feedback-manage.html.
          */
-        model.addAttribute(
-                "items",
-                items
-        );
-
-        /*
-         * Add conversation replies for the displayed cases.
-         */
-        model.addAttribute(
-                "replies",
-                feedbackService.repliesFor(items)
-        );
-
-        /*
-         * Add manager dashboard statistics.
-         */
-        model.addAttribute(
-                "stats",
-                feedbackService.stats()
-        );
-
-        /*
-         * Add values required by filter dropdowns.
-         */
-        model.addAttribute(
-                "types",
-                FeedbackType.values()
-        );
-
-        model.addAttribute(
-                "statuses",
-                FeedbackStatus.values()
-        );
-
-        /*
-         * WITHDRAWN is excluded because only members
-         * can withdraw their cases.
-         */
-        model.addAttribute(
-                "managerStatuses",
-                List.of(
-                        FeedbackStatus.OPEN,
-                        FeedbackStatus.IN_REVIEW,
-                        FeedbackStatus.RESOLVED,
-                        FeedbackStatus.CLOSED
-                )
-        );
-
-        model.addAttribute(
-                "priorities",
-                FeedbackPriority.values()
-        );
-
-        /*
-         * Preserve the selected filter values.
-         */
-        model.addAttribute(
-                "selectedType",
-                type
-        );
-
-        model.addAttribute(
-                "selectedStatus",
-                status
-        );
-
-        model.addAttribute(
-                "selectedPriority",
-                priority
-        );
-
-        model.addAttribute(
-                "keyword",
-                keyword == null
-                        ? ""
-                        : keyword
+        addManagerPageData(
+                model,
+                items,
+                type,
+                status,
+                priority,
+                cleanKeyword
         );
 
         return "feedback-manage";
     }
 
     /**
-     * Adds a manager reply to a feedback case.
+     * Adds a manager reply and notifies the member.
      *
      * URL: POST /feedback/manage/{id}/reply
      */
@@ -186,7 +133,7 @@ public class ManagerFeedbackController {
             RedirectAttributes flash) {
 
         /*
-         * Reject invalid reply messages.
+         * Do not send an invalid reply to the service.
          */
         if (errors.hasErrors()) {
 
@@ -195,13 +142,14 @@ public class ManagerFeedbackController {
                     firstError(errors)
             );
 
-            return "redirect:/feedback/manage";
+            return managerRedirect();
         }
 
         try {
 
             /*
-             * Save the manager reply and notify the member.
+             * The service saves the reply, changes OPEN to IN_REVIEW
+             * and notifies the member.
              */
             feedbackService.replyByManager(
                     id,
@@ -221,11 +169,11 @@ public class ManagerFeedbackController {
             );
         }
 
-        return "redirect:/feedback/manage";
+        return managerRedirect();
     }
 
     /**
-     * Updates the case status and priority.
+     * Updates the workflow status and handling priority.
      *
      * URL: POST /feedback/manage/{id}/status
      */
@@ -243,7 +191,7 @@ public class ManagerFeedbackController {
             RedirectAttributes flash) {
 
         /*
-         * Reject missing status or priority values.
+         * Status and priority are required.
          */
         if (errors.hasErrors()) {
 
@@ -252,14 +200,14 @@ public class ManagerFeedbackController {
                     firstError(errors)
             );
 
-            return "redirect:/feedback/manage";
+            return managerRedirect();
         }
 
         try {
 
             /*
-             * The service checks whether the requested
-             * status transition is allowed.
+             * The service validates the status transition
+             * before changing the entity.
              */
             feedbackService.updateCase(
                     id,
@@ -279,11 +227,11 @@ public class ManagerFeedbackController {
             );
         }
 
-        return "redirect:/feedback/manage";
+        return managerRedirect();
     }
 
     /**
-     * Archives a CLOSED or WITHDRAWN feedback case.
+     * Archives a completed case without deleting its history.
      *
      * URL: POST /feedback/manage/{id}/archive
      */
@@ -297,7 +245,7 @@ public class ManagerFeedbackController {
         try {
 
             /*
-             * Archiving hides the case without deleting its history.
+             * Only CLOSED and WITHDRAWN cases can be archived.
              */
             feedbackService.archive(id);
 
@@ -314,11 +262,102 @@ public class ManagerFeedbackController {
             );
         }
 
-        return "redirect:/feedback/manage";
+        return managerRedirect();
     }
 
     /**
-     * Returns the first validation error message.
+     * Adds all data required by feedback-manage.html.
+     */
+    private void addManagerPageData(
+
+            Model model,
+
+            List<FeedbackItem> items,
+
+            FeedbackType selectedType,
+
+            FeedbackStatus selectedStatus,
+
+            FeedbackPriority selectedPriority,
+
+            String keyword) {
+
+        /*
+         * Add the filtered feedback cases.
+         */
+        model.addAttribute(
+                "items",
+                items
+        );
+
+        /*
+         * Add replies belonging to the displayed cases.
+         */
+        model.addAttribute(
+                "replies",
+                feedbackService.repliesFor(items)
+        );
+
+        /*
+         * Add dashboard counts.
+         */
+        model.addAttribute(
+                "stats",
+                feedbackService.stats()
+        );
+
+        /*
+         * Add values for the search filters.
+         */
+        model.addAttribute(
+                "types",
+                FeedbackType.values()
+        );
+
+        model.addAttribute(
+                "statuses",
+                FeedbackStatus.values()
+        );
+
+        /*
+         * Add only the statuses that a manager may select.
+         */
+        model.addAttribute(
+                "managerStatuses",
+                MANAGER_STATUSES
+        );
+
+        model.addAttribute(
+                "priorities",
+                FeedbackPriority.values()
+        );
+
+        /*
+         * Keep selected filter values visible after searching.
+         */
+        model.addAttribute(
+                "selectedType",
+                selectedType
+        );
+
+        model.addAttribute(
+                "selectedStatus",
+                selectedStatus
+        );
+
+        model.addAttribute(
+                "selectedPriority",
+                selectedPriority
+        );
+
+        model.addAttribute(
+                "keyword",
+                keyword
+        );
+    }
+
+    /**
+     * Returns the first validation message.
      */
     private String firstError(
             BindingResult errors) {
@@ -332,5 +371,13 @@ public class ManagerFeedbackController {
                 .getAllErrors()
                 .get(0)
                 .getDefaultMessage();
+    }
+
+    /**
+     * Keeps every manager POST action on the manager queue page.
+     */
+    private String managerRedirect() {
+
+        return "redirect:/feedback/manage";
     }
 }
