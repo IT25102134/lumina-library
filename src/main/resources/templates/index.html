@@ -14,37 +14,52 @@
     <section class="program-section" id="programs">
         <div class="section-heading light"><span class="eyebrow"><i></i> Gather, learn, belong</span><h2>Beyond the books</h2></div>
 
-        <!-- Today Events -->
-        <div class="program-grid" th:if="${!#lists.isEmpty(todayEvents)}">
-            <article th:each="event:${todayEvents}">
-                <time><strong th:text="${#temporals.format(event.startAt,'dd')}">12</strong><span th:text="${#temporals.format(event.startAt,'MMM')}">SEP</span></time>
-                <div>
-                    <span class="pill" style="background:#dff1e8;color:#27684b;">Today</span>
-                    <h3 th:text="${event.title}">Program</h3>
-                    <p th:text="${event.description}">Program details.</p>
-                    <small th:text="${#temporals.format(event.startAt,'EEE, d MMM · h:mm a')}+' · '+${event.location}">Details</small>
-                </div>
-            </article>
-        </div>
-        <div th:if="${#lists.isEmpty(todayEvents)}" style="text-align:center;color:rgba(255,255,255,.55);padding:15px 0 5px;">
-            <p>No gatherings scheduled for today.</p>
-        </div>
-
-        <!-- See More Button -->
-        <div class="center" style="margin-top:35px;" th:if="${!#lists.isEmpty(upcomingEvents)}">
-            <button id="seeMoreBtn" type="button" class="btn btn-outline" style="color:#fff;border-color:rgba(255,255,255,.35);cursor:pointer;gap:8px;">
-                <span id="seeMoreText">See More</span> <span id="seeMoreArrow">↓</span>
-            </button>
-        </div>
-
-        <!-- Upcoming Events (Revealed when See More is clicked) -->
-        <div id="upcomingSection" style="display:none;margin-top:40px;">
-            <div style="text-align:center;margin-bottom:24px;">
-                <span class="eyebrow" style="color:var(--amber-2);"><i></i> Later Gatherings</span>
-                <h3 style="font:600 28px var(--serif);color:#fff;margin-top:8px;">Upcoming Events</h3>
-            </div>
+        <!-- CASE 1: If there ARE Today Events -->
+        <th:block th:if="${!#lists.isEmpty(todayEvents)}">
             <div class="program-grid">
-                <article th:each="event:${upcomingEvents}">
+                <article th:each="event:${todayEvents}">
+                    <time><strong th:text="${#temporals.format(event.startAt,'dd')}">12</strong><span th:text="${#temporals.format(event.startAt,'MMM')}">SEP</span></time>
+                    <div>
+                        <span class="pill" style="background:#dff1e8;color:#27684b;">Today</span>
+                        <h3 th:text="${event.title}">Program</h3>
+                        <p th:text="${event.description}">Program details.</p>
+                        <small th:text="${#temporals.format(event.startAt,'EEE, d MMM · h:mm a')}+' · '+${event.location}">Details</small>
+                    </div>
+                </article>
+            </div>
+
+            <!-- See More Button (when today events exist and upcoming events exist) -->
+            <div class="center" style="margin-top:35px;" th:if="${!#lists.isEmpty(upcomingEvents)}">
+                <button id="seeMoreBtn" type="button" class="btn btn-outline" style="color:#fff;border-color:rgba(255,255,255,.35);cursor:pointer;gap:8px;">
+                    <span id="seeMoreText">See More</span> <span id="seeMoreArrow">↓</span>
+                </button>
+            </div>
+
+            <!-- Upcoming Events (Revealed when See More is clicked) -->
+            <div id="upcomingSection" style="display:none;margin-top:40px;" th:if="${!#lists.isEmpty(upcomingEvents)}">
+                <div style="text-align:center;margin-bottom:24px;">
+                    <span class="eyebrow" style="color:var(--amber-2);"><i></i> Later Gatherings</span>
+                    <h3 style="font:600 28px var(--serif);color:#fff;margin-top:8px;">Upcoming Events</h3>
+                </div>
+                <div class="program-grid">
+                    <article th:each="event:${upcomingEvents}">
+                        <time><strong th:text="${#temporals.format(event.startAt,'dd')}">12</strong><span th:text="${#temporals.format(event.startAt,'MMM')}">SEP</span></time>
+                        <div>
+                            <span class="pill">Upcoming</span>
+                            <h3 th:text="${event.title}">Program</h3>
+                            <p th:text="${event.description}">Program details.</p>
+                            <small th:text="${#temporals.format(event.startAt,'EEE, d MMM · h:mm a')}+' · '+${event.location}">Details</small>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </th:block>
+
+        <!-- CASE 2: If there are NO Today Events -->
+        <th:block th:if="${#lists.isEmpty(todayEvents)}">
+            <!-- Nearest 3 Upcoming Events -->
+            <div class="program-grid" th:if="${!#lists.isEmpty(nearestUpcomingEvents)}">
+                <article th:each="event:${nearestUpcomingEvents}">
                     <time><strong th:text="${#temporals.format(event.startAt,'dd')}">12</strong><span th:text="${#temporals.format(event.startAt,'MMM')}">SEP</span></time>
                     <div>
                         <span class="pill">Upcoming</span>
@@ -54,7 +69,38 @@
                     </div>
                 </article>
             </div>
-        </div>
+
+            <!-- See More Button (when there are more upcoming events beyond the nearest 3) -->
+            <div class="center" style="margin-top:35px;" th:if="${!#lists.isEmpty(remainingUpcomingEvents)}">
+                <button id="seeMoreBtn" type="button" class="btn btn-outline" style="color:#fff;border-color:rgba(255,255,255,.35);cursor:pointer;gap:8px;">
+                    <span id="seeMoreText">See More</span> <span id="seeMoreArrow">↓</span>
+                </button>
+            </div>
+
+            <!-- Remaining Upcoming Events (Revealed when See More is clicked) -->
+            <div id="upcomingSection" style="display:none;margin-top:40px;" th:if="${!#lists.isEmpty(remainingUpcomingEvents)}">
+                <div style="text-align:center;margin-bottom:24px;">
+                    <span class="eyebrow" style="color:var(--amber-2);"><i></i> Later Gatherings</span>
+                    <h3 style="font:600 28px var(--serif);color:#fff;margin-top:8px;">More Upcoming Events</h3>
+                </div>
+                <div class="program-grid">
+                    <article th:each="event:${remainingUpcomingEvents}">
+                        <time><strong th:text="${#temporals.format(event.startAt,'dd')}">12</strong><span th:text="${#temporals.format(event.startAt,'MMM')}">SEP</span></time>
+                        <div>
+                            <span class="pill">Upcoming</span>
+                            <h3 th:text="${event.title}">Program</h3>
+                            <p th:text="${event.description}">Program details.</p>
+                            <small th:text="${#temporals.format(event.startAt,'EEE, d MMM · h:mm a')}+' · '+${event.location}">Details</small>
+                        </div>
+                    </article>
+                </div>
+            </div>
+
+            <!-- If NO events at all -->
+            <div th:if="${#lists.isEmpty(upcomingEvents)}" style="text-align:center;color:rgba(255,255,255,.55);padding:25px 0;">
+                <p>No gatherings or programs scheduled at this time. Check back soon!</p>
+            </div>
+        </th:block>
     </section>
 </main>
 <script>
