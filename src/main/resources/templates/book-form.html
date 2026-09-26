@@ -3,11 +3,11 @@
 <head th:replace="~{fragments/layout :: head('Book record')}"></head>
 <body><aside th:replace="~{fragments/layout :: sidebar('catalog')}"></aside><div class="app-shell">
 <header th:replace="~{fragments/layout :: topbar('Catalogue record','Catalog management')}"></header>
-<main class="content"><section class="panel form-panel"><div class="panel-head"><h2>Bibliographic details</h2><span class="status">Required fields</span></div>
-<form class="panel-body" th:action="@{/catalog/manage/save}" th:object="${book}" method="post"><input type="hidden" th:field="*{id}"><div class="form-grid">
-<label class="field">ISBN<input th:field="*{isbn}" required placeholder="9780000000000"></label><label class="field">Title<input th:field="*{title}" required></label>
-<label class="field">Author<input th:field="*{author}" required></label><label class="field">Category<input th:field="*{category}" required placeholder="Fiction, Science, History…"></label>
+<main class="content"><section class="panel form-panel"><div class="panel-head"><h2>Bibliographic details</h2><span class="status">* Required fields</span></div>
+<form class="panel-body" th:action="@{/catalog/manage/save}" th:object="${book}" method="post" enctype="multipart/form-data"><input type="hidden" th:field="*{id}"><div class="form-grid">
+<label class="field">ISBN <b class="required">*</b><input th:field="*{isbn}" required placeholder="9780000000000"></label><label class="field">Title <b class="required">*</b><input th:field="*{title}" required></label>
+<label class="field">Author <b class="required">*</b><input th:field="*{author}" required></label><label class="field">Category <b class="required">*</b><input th:field="*{category}" required placeholder="Fiction, Science, History…"></label>
 <label class="field">Publisher<input th:field="*{publisher}"></label><label class="field">Publication year<input th:field="*{publicationYear}" type="number" min="1000" max="2100"></label>
 <label class="field full">Description<textarea th:field="*{description}" placeholder="A concise introduction for readers"></textarea></label>
-<label class="field full">Cover image URL<input th:field="*{coverUrl}" type="url" placeholder="https://…"></label><label class="field full">E-book URL (optional)<input th:field="*{ebookUrl}" type="url" placeholder="https://…"></label>
+<label class="field full">Cover image URL (optional)<input th:field="*{coverUrl}" type="url" placeholder="https://…"></label><label class="field full">Or select an image from your device<input name="coverImage" type="file" accept="image/png,image/jpeg,image/gif,image/webp"></label><label class="field full">E-book URL (optional)<input th:field="*{ebookUrl}" type="url" placeholder="https://…"></label>
 </div><div class="form-footer"><a class="btn btn-outline" th:href="@{/catalog}">Cancel</a><button class="btn btn-amber">Save catalogue record →</button></div></form></section></main></div></body></html>

@@ -6,6 +6,13 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.querySelector('input[name="username"]').value=button.dataset.fill;
     document.querySelector('input[name="password"]').value='Library@123';
   }));
+  document.querySelectorAll('[data-password-toggle]').forEach(button=>button.addEventListener('click',()=>{
+    const input=document.getElementById(button.dataset.passwordToggle);
+    const show=input.type==='password';
+    input.type=show?'text':'password';
+    button.setAttribute('aria-label',show?'Hide password':'Show password');
+    button.setAttribute('aria-pressed',String(show));
+  }));
   document.querySelectorAll('[data-glow-card]').forEach(card=>{
     card.addEventListener('pointermove',event=>{
       if(event.pointerType==='touch')return;
