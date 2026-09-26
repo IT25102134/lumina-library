@@ -33,8 +33,8 @@ public class HomeController {
                 .sorted(Comparator.comparing(LibraryEvent::getStartAt)).toList();
         model.addAttribute("todayEvents",todayEvents);
         model.addAttribute("upcomingEvents",upcomingEvents);
-        model.addAttribute("nearestUpcomingEvents",upcomingEvents.stream().limit(3).toList());
-        model.addAttribute("remainingUpcomingEvents",upcomingEvents.stream().skip(3).toList());
+        model.addAttribute("nearestUpcomingEvents",upcomingEvents.stream().limit(2).toList());
+        model.addAttribute("remainingUpcomingEvents",upcomingEvents.stream().skip(2).toList());
         model.addAttribute("upcoming",upcomingEvents);
         return "index";
     }
