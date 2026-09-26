@@ -36,7 +36,7 @@
                             <span th:if="${!registeredEventIds.contains(event.id) && fullyBookedIds.contains(event.id)}" class="btn btn-sm" style="background:#f6e1de;color:#9c443d;border:1px solid #e8c0bb;cursor:not-allowed;">⊘ Fully Booked</span>
                             <form th:if="${!registeredEventIds.contains(event.id) && !fullyBookedIds.contains(event.id)}" th:action="@{/events/{id}/register(id=${event.id})}" method="post"><button class="btn btn-amber btn-sm">Reserve a place</button></form>
                         </th:block>
-                        <a sec:authorize="hasAnyRole('EVENT_COORDINATOR','HEAD_LIBRARIAN')" class="btn btn-outline btn-sm" th:href="@{/events/manage/{id}/edit(id=${event.id})}">Edit program</a>
+                        <a sec:authorize="hasAnyRole('EVENT_COORDINATOR','HEAD_LIBRARIAN')" th:if="${!event.isPast()}" class="btn btn-outline btn-sm" th:href="@{/events/manage/{id}/edit(id=${event.id})}">Edit program</a>
                         <form sec:authorize="hasAnyRole('EVENT_COORDINATOR','HEAD_LIBRARIAN')" th:action="@{/events/manage/{id}/delete(id=${event.id})}" method="post" onsubmit="return confirm('Delete this event and all its registrations?');"><button class="btn btn-outline btn-sm" style="color:#e05c5c;border-color:#e05c5c;">Delete</button></form>
                     </div>
                 </div>
@@ -87,7 +87,6 @@
                     <p th:text="${event.description}">Description</p>
                     <div class="event-meta" th:text="'⌖ '+${event.location}">Location</div>
                     <div class="card-actions">
-                        <a sec:authorize="hasAnyRole('EVENT_COORDINATOR','HEAD_LIBRARIAN')" class="btn btn-outline btn-sm" th:href="@{/events/manage/{id}/edit(id=${event.id})}">Edit program</a>
                         <form sec:authorize="hasAnyRole('EVENT_COORDINATOR','HEAD_LIBRARIAN')" th:action="@{/events/manage/{id}/delete(id=${event.id})}" method="post" onsubmit="return confirm('Delete this event and all its registrations?');"><button class="btn btn-outline btn-sm" style="color:#e05c5c;border-color:#e05c5c;">Delete</button></form>
                     </div>
                 </div>
