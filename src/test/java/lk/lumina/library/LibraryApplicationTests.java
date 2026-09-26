@@ -59,6 +59,45 @@ class LibraryApplicationTests {
     @Test @WithMockUser(username="events@lumina.lk",roles="EVENT_COORDINATOR")
     void eventPagesRender() throws Exception { mvc.perform(get("/events")).andExpect(status().isOk());mvc.perform(get("/events/manage/new")).andExpect(status().isOk()); }
 
+    @Autowired lk.lumina.library.repository.LibraryEventRepository events;
+
+    @Test @WithMockUser(username="events@lumina.lk",roles="EVENT_COORDINATOR")
+    void pastEventsCannotBeEditedAndEditOptionRemoved() throws Exception {
+        lk.lumina.library.model.LibraryEvent past = new lk.lumina.library.model.LibraryEvent();
+        past.setTitle("Past Poetry Workshop");
+        past.setDescription("A workshop held last month.");
+        past.setLocation("Hall B");
+        past.setStartAt(java.time.LocalDateTime.now().minusDays(5));
+        past.setCapacity(20);
+        past = events.save(past);
+
+        // Events list should show the past event and delete button, but NOT an edit button for it
+        mvc.perform(get("/events"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Past Poetry Workshop")))
+                .andExpect(content().string(containsString("/events/manage/" + past.getId() + "/delete")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("/events/manage/" + past.getId() + "/edit"))));
+
+        // Direct GET to edit page for past event should redirect with flash message
+        mvc.perform(get("/events/manage/" + past.getId() + "/edit"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/events"))
+                .andExpect(flash().attribute("error", "Past events cannot be edited."));
+
+        // Attempting to POST save for past event should redirect with flash message
+        mvc.perform(post("/events/manage/save")
+                        .param("id", past.getId().toString())
+                        .param("title", "Updated Title")
+                        .param("description", "Updated Desc")
+                        .param("location", "Hall B")
+                        .param("startAt", java.time.LocalDateTime.now().plusDays(1).format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm")))
+                        .param("capacity", "25")
+                        .with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/events"))
+                .andExpect(flash().attribute("error", "Past events cannot be edited."));
+    }
+
     @Test @WithMockUser(username="manager@lumina.lk",roles="LIBRARY_MANAGER")
     void managerPagesRender() throws Exception { mvc.perform(get("/feedback/manage")).andExpect(status().isOk());mvc.perform(get("/reports")).andExpect(status().isOk());mvc.perform(get("/audit")).andExpect(status().isOk());mvc.perform(get("/users")).andExpect(status().isOk()); }
 }
