@@ -33,4 +33,9 @@
 .cursor-follower.is-visible{opacity:1}
 .cursor-follower.is-over-action:before{transform:scale(1.65);background:var(--amber-2)}
 @media(prefers-reduced-motion:reduce){.glow-card:before,.glow-card:after,.btn-arrow:before,.btn-arrow:after{transition:none}.btn-arrow-motion:hover .btn-arrow:before,.btn-arrow-motion:focus-visible .btn-arrow:before{transform:none}.btn-arrow-motion:hover .btn-arrow:after,.btn-arrow-motion:focus-visible .btn-arrow:after{transform:translate(-105%,105%)}}
+
+/* Public landing-page motion only; authenticated dashboards are unaffected. */
+.scroll-reveal{opacity:0;transform:translateY(36px);transition:opacity .7s ease,transform .7s cubic-bezier(.22,1,.36,1)}.scroll-reveal.is-visible{opacity:1;transform:none}.collection-carousel{max-width:1060px;height:455px;margin:auto;overflow:hidden}.collection-carousel .book-showcase{position:relative;display:block;height:100%}.collection-carousel .public-book{position:absolute;top:0;left:50%;width:280px;display:block;opacity:0;pointer-events:none;transform:translateX(-50%) scale(.76);transition:opacity .32s ease,transform .32s ease;will-change:opacity,transform}.collection-carousel .public-book.is-active{z-index:2;opacity:1;transform:translateX(-50%) scale(1);pointer-events:auto}.collection-carousel .public-book.is-previous{z-index:1;opacity:.42;transform:translateX(calc(-50% - 325px)) scale(.82)}.collection-carousel .public-book.is-next{z-index:1;opacity:.42;transform:translateX(calc(-50% + 325px)) scale(.82)}@keyframes collectionFade{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.scroll-reveal{opacity:1;transform:none;transition:none}.collection-carousel .public-book{animation:none}}
+@media(max-width:800px){.collection-carousel{height:455px;max-width:320px}.collection-carousel .public-book.is-previous,.collection-carousel .public-book.is-next{opacity:0}}
 .required{color:#c94a43}
