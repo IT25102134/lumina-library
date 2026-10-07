@@ -28,8 +28,12 @@ public class SecurityConfig {
                 .requestMatchers("/inventory/**").hasRole("LIBRARY_ASSISTANT")
                 .requestMatchers("/circulation/**").hasAnyRole("CIRCULATION_STAFF","HEAD_LIBRARIAN")
                 .requestMatchers("/events/manage/**").hasAnyRole("EVENT_COORDINATOR","HEAD_LIBRARIAN")
-                .requestMatchers("/feedback/manage/**").hasAnyRole("LIBRARY_MANAGER","HEAD_LIBRARIAN")
                 .requestMatchers("/audit/**").hasAnyRole("LIBRARY_MANAGER","HEAD_LIBRARIAN")
+                // Manager feedback URLs must be checked before the general member feedback URLs.
+                .requestMatchers("/feedback/manage", "/feedback/manage/**")
+                .hasRole("LIBRARY_MANAGER")
+                .requestMatchers("/feedback", "/feedback/**")
+                .hasRole("MEMBER")
                 .anyRequest().authenticated())
             .formLogin(form -> form.loginPage("/login").defaultSuccessUrl("/dashboard",true).permitAll())
             .logout(logout -> logout.logoutSuccessUrl("/?logout").permitAll())
