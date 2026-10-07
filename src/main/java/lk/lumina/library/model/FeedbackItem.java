@@ -76,6 +76,7 @@ public class FeedbackItem {
 
     private LocalDateTime resolvedAt;
 
+    // Archive the case without deleting its conversation history.
     @Column(nullable = false)
     private boolean archived = false;
 

@@ -19,11 +19,13 @@ public interface FeedbackRepository extends JpaRepository<FeedbackItem, Long> {
 
     List<FeedbackItem> findByMemberIdOrderByCreatedAtDesc(Long memberId);
 
-    /**
-     * Scopes lookup to both item ID and member ID to enforce horizontal
-     * authorization and prevent insecure direct object references (IDOR).
-     */
+    List<FeedbackItem> findByMemberIdAndArchivedFalseOrderByCreatedAtDesc(Long memberId);
+
     Optional<FeedbackItem> findByIdAndMemberId(Long id, Long memberId);
+
+    Optional<FeedbackItem> findByIdAndMemberIdAndArchivedFalse(Long id, Long memberId);
+
+    Optional<FeedbackItem> findByIdAndArchivedFalse(Long id);
 
     long countByStatusIn(Collection<FeedbackStatus> statuses);
 
@@ -33,14 +35,12 @@ public interface FeedbackRepository extends JpaRepository<FeedbackItem, Long> {
 
     long countByTypeAndArchivedFalse(FeedbackType type);
 
-    /**
-     * Dynamic search for staff/manager dashboards. Supports optional filtering by
-     * type, status, and priority, with case-insensitive partial keyword matching across
-     * reference number, subject, and submitter name.
-     */
+    // Optional filters stay null so one query can search the active manager queue.
+    // JOIN FETCH loads the member in the same query for the manager case list.
     @Query("""
         SELECT item
         FROM FeedbackItem item
+        JOIN FETCH item.member member
         WHERE item.archived = false
           AND (:type IS NULL OR item.type = :type)
           AND (:status IS NULL OR item.status = :status)
@@ -49,8 +49,11 @@ public interface FeedbackRepository extends JpaRepository<FeedbackItem, Long> {
                 :keyword IS NULL
                 OR LOWER(item.referenceNumber) LIKE LOWER(CONCAT('%', :keyword, '%'))
                 OR LOWER(item.subject) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(item.member.firstName) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(item.member.lastName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(item.message) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(member.firstName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(member.lastName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(member.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(member.membershipNumber) LIKE LOWER(CONCAT('%', :keyword, '%'))
               )
         ORDER BY item.createdAt DESC
         """)
@@ -58,6 +61,5 @@ public interface FeedbackRepository extends JpaRepository<FeedbackItem, Long> {
             @Param("type") FeedbackType type,
             @Param("status") FeedbackStatus status,
             @Param("priority") FeedbackPriority priority,
-            @Param("keyword") String keyword
-    );
+            @Param("keyword") String keyword);
 }

@@ -16,7 +16,7 @@ public class FeedbackReply {
     @JoinColumn(name = "feedback_id", nullable = false)
     private FeedbackItem feedbackItem;
 
-    // Reply for Member or Manage
+    // Member or manager who wrote this reply.
     @ManyToOne(optional = false)
     @JoinColumn(name = "author_id", nullable = false)
     private UserAccount author;

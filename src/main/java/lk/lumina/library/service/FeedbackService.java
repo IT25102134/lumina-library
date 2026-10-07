@@ -97,6 +97,7 @@ public class FeedbackService {
         copyForm(item, form);
         item = feedbackRepository.save(item);
 
+        // Notify managers and record the submission for audit.
         audit(member, "SUBMIT", item, item.getSubject());
         notifyManagers(
                 "New feedback case",
@@ -128,6 +129,7 @@ public class FeedbackService {
     public void withdrawByMember(Long id) {
         FeedbackItem item = currentMemberItem(id);
 
+        // Withdraw keeps the case and conversation; it does not delete history.
         if (!item.getStatus().isMemberCanWithdraw()) {
             throw new FeedbackBusinessException(
                     "A resolved or closed case cannot be withdrawn.");
@@ -195,6 +197,7 @@ public class FeedbackService {
             item.setStatus(FeedbackStatus.IN_REVIEW);
         }
 
+        // Notify the member after the manager updates the case.
         notifyMember(
                 item,
                 "Feedback case updated",
@@ -211,6 +214,7 @@ public class FeedbackService {
         FeedbackStatus newStatus = form.getStatus();
         FeedbackPriority newPriority = form.getPriority();
 
+        // Validate the status transition before updating the case.
         validateTransition(oldStatus, newStatus);
 
         boolean statusChanged = oldStatus != newStatus;
@@ -294,8 +298,12 @@ public class FeedbackService {
     }
 
     private void copyForm(FeedbackItem item, FeedbackForm form) {
+        String category = clean(form.getCategory());
+        if (!CATEGORIES.contains(category)) {
+            throw new FeedbackBusinessException("Please select a valid category.");
+        }
         item.setType(form.getType());
-        item.setCategory(clean(form.getCategory()));
+        item.setCategory(category);
         item.setSubject(clean(form.getSubject()));
         item.setMessage(clean(form.getMessage()));
     }
