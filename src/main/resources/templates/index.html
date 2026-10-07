@@ -7,11 +7,11 @@
         <div class="hero-content"><span class="eyebrow"><i></i> Knowledge, beautifully connected</span><h1>Every story<br>starts with an <em>open door.</em></h1><p>Discover books, ideas, programs and a community built around curiosity—all from one thoughtful space.</p><div class="hero-actions"><a class="btn btn-amber btn-lg" th:href="@{/login}">Explore your library <span>→</span></a><a class="text-link" href="#collections">Browse highlights ↓</a></div><div class="hero-stats"><div><strong>24K+</strong><span>titles to discover</span></div><div><strong>120+</strong><span>annual programs</span></div><div><strong>6</strong><span>connected services</span></div></div></div>
         <div class="scroll-note">SCROLL TO DISCOVER <i></i></div>
     </section>
-    <section class="paper-section" id="collections"><div class="section-heading"><span class="eyebrow dark"><i></i> Curated for curious minds</span><h2>Fresh from the shelves</h2><p>Thoughtful reads, timeless voices, and ideas worth carrying with you.</p></div>
-        <div class="book-showcase"><article class="public-book" th:each="book,i:${featured}"><div class="book-image"><img th:src="${book.coverUrl}" th:alt="${book.title}"><span th:text="${book.category}">Fiction</span></div><div><small th:text="${#numbers.formatInteger(i.index+1,2)}">01</small><h3 th:text="${book.title}">Book title</h3><p th:text="${book.author}">Author</p></div></article></div>
+    <section class="paper-section scroll-reveal" id="collections"><div class="section-heading"><span class="eyebrow dark"><i></i> Curated for curious minds</span><h2>Fresh from the shelves</h2><p>Thoughtful reads, timeless voices, and ideas worth carrying with you.</p></div>
+        <div class="collection-carousel" aria-label="Featured library collection"><div class="book-showcase"><article class="public-book" th:each="book,i:${featured}"><div class="book-image"><img th:src="${book.coverUrl}" th:alt="${book.title}"><span th:text="${book.category}">Fiction</span></div><div><small th:text="${#numbers.formatInteger(i.index+1,2)}">01</small><h3 th:text="${book.title}">Book title</h3><p th:text="${book.author}">Author</p></div></article></div></div>
         <div class="center"><a class="btn btn-ink" th:href="@{/login}">View full catalogue <span>→</span></a></div>
     </section>
-    <section class="program-section" id="programs">
+    <section class="program-section scroll-reveal" id="programs">
         <div class="section-heading light"><span class="eyebrow"><i></i> Gather, learn, belong</span><h2>Beyond the books</h2></div>
 
         <!-- CASE 1: If there ARE Today Events -->
@@ -122,6 +122,38 @@
                     seeMoreArrow.textContent = '↓';
                 }
             });
+        }
+
+        const reveals = document.querySelectorAll('.scroll-reveal');
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver(entries => entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                    observer.unobserve(entry.target);
+                }
+            }), { threshold: 0.16 });
+            reveals.forEach(section => observer.observe(section));
+        } else {
+            reveals.forEach(section => section.classList.add('is-visible'));
+        }
+
+        const collectionCards = document.querySelectorAll('.collection-carousel .public-book');
+        if (collectionCards.length > 1) {
+            let activeCard = 0;
+            const showCollectionCard = () => {
+                const previousCard = (activeCard - 1 + collectionCards.length) % collectionCards.length;
+                const nextCard = (activeCard + 1) % collectionCards.length;
+                collectionCards.forEach((card, index) => {
+                    card.classList.toggle('is-active', index === activeCard);
+                    card.classList.toggle('is-previous', index === previousCard);
+                    card.classList.toggle('is-next', index === nextCard);
+                });
+            };
+            showCollectionCard();
+            window.setInterval(() => {
+                activeCard = (activeCard + 1) % collectionCards.length;
+                showCollectionCard();
+            }, 2200);
         }
     });
 </script>
