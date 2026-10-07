@@ -23,391 +23,185 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-/**
- * Handles the library member's feedback pages and actions.
- */
 @Controller
 @RequestMapping("/feedback")
 @PreAuthorize("hasRole('MEMBER')")
 public class MemberFeedbackController {
 
+    private static final String MEMBER_PAGE = "redirect:/feedback";
+    private static final String RETRY_HINT = " Please retry the action.";
+
     private final FeedbackService feedbackService;
 
-    /**
-     * Spring injects the FeedbackService through the constructor.
-     */
-    public MemberFeedbackController(
-            FeedbackService feedbackService) {
-
+    public MemberFeedbackController(FeedbackService feedbackService) {
         this.feedbackService = feedbackService;
     }
 
-    /**
-     * Displays the feedback form and the logged-in member's cases.
-     *
-     * URL: GET /feedback
-     */
     @GetMapping
     public String showFeedbackPage(Model model) {
-
-        /*
-         * Create an empty form when the page is opened
-         * for the first time.
-         */
         if (!model.containsAttribute("feedbackForm")) {
-
-            model.addAttribute(
-                    "feedbackForm",
-                    new FeedbackForm()
-            );
+            model.addAttribute("feedbackForm", new FeedbackForm());
         }
-
-        /*
-         * Add cases, replies, types and categories.
-         */
         addMemberPageData(model);
-
         return "feedback";
     }
 
-    /**
-     * Submits a new feedback, complaint or suggestion.
-     *
-     * URL: POST /feedback
-     */
     @PostMapping
     public String submitCase(
-
-            @Valid
-            @ModelAttribute("feedbackForm")
-            FeedbackForm form,
-
+            @Valid @ModelAttribute("feedbackForm") FeedbackForm form,
             BindingResult errors,
-
             Model model,
-
             RedirectAttributes flash) {
 
-        /*
-         * Do not save the form when validation fails.
-         */
         if (errors.hasErrors()) {
-
             addMemberPageData(model);
-
             return "feedback";
         }
 
-        /*
-         * Send the validated form to the service layer.
-         */
-        FeedbackItem item =
-                feedbackService.submit(form);
-
-        /*
-         * Display the generated reference number.
-         */
-        flash.addFlashAttribute(
-                "success",
-                "Your message was submitted. Reference: "
-                        + item.getReferenceNumber()
-        );
-
-        /*
-         * Redirecting prevents duplicate form submissions.
-         */
-        return "redirect:/feedback";
-    }
-
-    /**
-     * Displays the edit page for an editable case.
-     *
-     * URL: GET /feedback/{id}/edit
-     */
-    @GetMapping("/{id}/edit")
-    public String showEditPage(
-
-            @PathVariable Long id,
-
-            Model model,
-
-            RedirectAttributes flash) {
-
-        /*
-         * The service checks whether the case belongs
-         * to the logged-in member.
-         */
-        FeedbackItem item =
-                feedbackService.currentMemberItem(id);
-
         try {
-
-            /*
-             * The case must be OPEN and must not contain replies.
-             */
-            feedbackService.assertMemberCanEdit(item);
-
+            FeedbackItem item = feedbackService.submit(form);
+            flash.addFlashAttribute(
+                    "success",
+                    "Your message was submitted. Reference: " + item.getReferenceNumber());
         } catch (FeedbackBusinessException exception) {
-
+            flash.addFlashAttribute("error", exception.getMessage() + RETRY_HINT);
+        } catch (ResponseStatusException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
             flash.addFlashAttribute(
                     "error",
-                    exception.getMessage()
-            );
-
-            return "redirect:/feedback";
+                    "Your case could not be submitted." + RETRY_HINT);
         }
 
-        /*
-         * Copy existing case values to the form object.
-         */
-        FeedbackForm form =
-                FeedbackForm.from(item);
+        return MEMBER_PAGE;
+    }
 
-        addEditPageData(
-                model,
-                item,
-                form
-        );
+    @GetMapping("/{id}/edit")
+    public String showEditPage(
+            @PathVariable Long id,
+            Model model,
+            RedirectAttributes flash) {
 
+        // Verify that the case belongs to the logged-in member.
+        FeedbackItem item = feedbackService.currentMemberItem(id);
+
+        try {
+            feedbackService.assertMemberCanEdit(item);
+        } catch (FeedbackBusinessException exception) {
+            flash.addFlashAttribute("error", exception.getMessage());
+            return MEMBER_PAGE;
+        }
+
+        addEditPageData(model, item, FeedbackForm.from(item));
         return "feedback-edit";
     }
 
-    /**
-     * Saves changes to an existing feedback case.
-     *
-     * URL: POST /feedback/{id}/edit
-     */
     @PostMapping("/{id}/edit")
     public String updateCase(
-
             @PathVariable Long id,
-
-            @Valid
-            @ModelAttribute("feedbackForm")
-            FeedbackForm form,
-
+            @Valid @ModelAttribute("feedbackForm") FeedbackForm form,
             BindingResult errors,
-
             Model model,
-
             RedirectAttributes flash) {
 
-        /*
-         * Verify that the case belongs to the member.
-         */
-        FeedbackItem item =
-                feedbackService.currentMemberItem(id);
+        FeedbackItem item = feedbackService.currentMemberItem(id);
 
-        /*
-         * Return to the edit page when validation fails.
-         */
         if (errors.hasErrors()) {
-
-            addEditPageData(
-                    model,
-                    item,
-                    form
-            );
-
+            addEditPageData(model, item, form);
             return "feedback-edit";
         }
 
         try {
-
-            /*
-             * The service checks the edit business rules.
-             */
-            feedbackService.updateByMember(
-                    id,
-                    form
-            );
-
-            flash.addFlashAttribute(
-                    "success",
-                    "Feedback case updated successfully."
-            );
-
+            feedbackService.updateByMember(id, form);
+            flash.addFlashAttribute("success", "Feedback case updated successfully.");
         } catch (FeedbackBusinessException exception) {
-
-            flash.addFlashAttribute(
-                    "error",
-                    exception.getMessage()
-            );
+            flash.addFlashAttribute("error", exception.getMessage() + RETRY_HINT);
+        } catch (ResponseStatusException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            flash.addFlashAttribute("error", "The case could not be updated." + RETRY_HINT);
         }
 
-        return "redirect:/feedback";
+        return MEMBER_PAGE;
     }
 
-    /**
-     * Withdraws an OPEN or IN_REVIEW case.
-     *
-     * URL: POST /feedback/{id}/withdraw
-     */
     @PostMapping("/{id}/withdraw")
-    public String withdrawCase(
-
-            @PathVariable Long id,
-
-            RedirectAttributes flash) {
-
+    public String withdrawCase(@PathVariable Long id, RedirectAttributes flash) {
         try {
-
-            /*
-             * The service checks ownership and case status.
-             */
+            // Withdraw keeps the case and conversation; it does not delete history.
             feedbackService.withdrawByMember(id);
-
-            flash.addFlashAttribute(
-                    "success",
-                    "Feedback case withdrawn."
-            );
-
+            flash.addFlashAttribute("success", "Feedback case withdrawn.");
         } catch (FeedbackBusinessException exception) {
-
-            flash.addFlashAttribute(
-                    "error",
-                    exception.getMessage()
-            );
+            flash.addFlashAttribute("error", exception.getMessage() + RETRY_HINT);
+        } catch (ResponseStatusException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            flash.addFlashAttribute("error", "The case could not be withdrawn." + RETRY_HINT);
         }
 
-        return "redirect:/feedback";
+        return MEMBER_PAGE;
     }
 
-    /**
-     * Adds a member reply to an active case.
-     *
-     * URL: POST /feedback/{id}/reply
-     */
     @PostMapping("/{id}/reply")
     public String replyToCase(
-
             @PathVariable Long id,
-
-            @Valid
-            @ModelAttribute("replyForm")
-            FeedbackReplyForm replyForm,
-
+            @Valid @ModelAttribute("replyForm") FeedbackReplyForm replyForm,
             BindingResult errors,
-
             RedirectAttributes flash) {
 
-        /*
-         * Redirect with the first validation error.
-         */
         if (errors.hasErrors()) {
-
-            flash.addFlashAttribute(
-                    "error",
-                    firstError(errors)
-            );
-
-            return "redirect:/feedback";
+            rememberRetryDraft(flash, id, replyForm.getMessage());
+            flash.addFlashAttribute("error", firstError(errors) + RETRY_HINT);
+            return MEMBER_PAGE;
         }
 
         try {
-
-            /*
-             * The service checks ownership, case status
-             * and reply contents.
-             */
-            feedbackService.replyByMember(
-                    id,
-                    replyForm.getMessage()
-            );
-
-            flash.addFlashAttribute(
-                    "success",
-                    "Your reply was added to the case."
-            );
-
+            feedbackService.replyByMember(id, replyForm.getMessage());
+            flash.addFlashAttribute("success", "Your reply was added to the case.");
         } catch (FeedbackBusinessException exception) {
-
-            flash.addFlashAttribute(
-                    "error",
-                    exception.getMessage()
-            );
+            rememberRetryDraft(flash, id, replyForm.getMessage());
+            flash.addFlashAttribute("error", exception.getMessage() + RETRY_HINT);
+        } catch (ResponseStatusException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            rememberRetryDraft(flash, id, replyForm.getMessage());
+            flash.addFlashAttribute("error", "Your reply could not be sent." + RETRY_HINT);
         }
 
-        return "redirect:/feedback";
+        return MEMBER_PAGE;
     }
 
-    /**
-     * Adds the data required by feedback.html.
-     */
     private void addMemberPageData(Model model) {
-
-        List<FeedbackItem> items =
-                feedbackService.currentMemberItems();
-
-        model.addAttribute(
-                "items",
-                items
-        );
-
-        model.addAttribute(
-                "replies",
-                feedbackService.repliesFor(items)
-        );
-
-        model.addAttribute(
-                "types",
-                FeedbackType.values()
-        );
-
-        model.addAttribute(
-                "categories",
-                feedbackService.categories()
-        );
+        List<FeedbackItem> items = feedbackService.currentMemberItems();
+        model.addAttribute("items", items);
+        model.addAttribute("replies", feedbackService.repliesFor(items));
+        model.addAttribute("types", FeedbackType.values());
+        model.addAttribute("categories", feedbackService.categories());
+        if (!model.containsAttribute("replyForm")) {
+            model.addAttribute("replyForm", new FeedbackReplyForm());
+        }
     }
 
-    /**
-     * Adds the data required by feedback-edit.html.
-     */
-    private void addEditPageData(
-
-            Model model,
-
-            FeedbackItem item,
-
-            FeedbackForm form) {
-
-        model.addAttribute(
-                "item",
-                item
-        );
-
-        model.addAttribute(
-                "feedbackForm",
-                form
-        );
-
-        model.addAttribute(
-                "types",
-                FeedbackType.values()
-        );
-
-        model.addAttribute(
-                "categories",
-                feedbackService.categories()
-        );
+    private void addEditPageData(Model model, FeedbackItem item, FeedbackForm form) {
+        model.addAttribute("item", item);
+        model.addAttribute("feedbackForm", form);
+        model.addAttribute("types", FeedbackType.values());
+        model.addAttribute("categories", feedbackService.categories());
     }
 
-    /**
-     * Returns the first validation error message.
-     */
-    private String firstError(
-            BindingResult errors) {
+    // Keep the reply text after a failed submit so the member can retry.
+    private void rememberRetryDraft(RedirectAttributes flash, Long caseId, String message) {
+        flash.addFlashAttribute("retryCaseId", caseId);
+        flash.addFlashAttribute("retryMessage", message);
+    }
 
+    private String firstError(BindingResult errors) {
         if (errors.getAllErrors().isEmpty()) {
-
             return "Please check the submitted values.";
         }
-
-        return errors
-                .getAllErrors()
-                .get(0)
-                .getDefaultMessage();
+        return errors.getAllErrors().get(0).getDefaultMessage();
     }
 }
