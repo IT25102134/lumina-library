@@ -26,358 +26,191 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-/**
- * Handles feedback actions available to a library manager.
- */
 @Controller
 @RequestMapping("/feedback/manage")
 @PreAuthorize("hasRole('LIBRARY_MANAGER')")
 public class ManagerFeedbackController {
 
-    /**
-     * WITHDRAWN is excluded because only a member can withdraw a case.
-     */
-    private static final List<FeedbackStatus> MANAGER_STATUSES =
-            List.of(
-                    FeedbackStatus.OPEN,
-                    FeedbackStatus.IN_REVIEW,
-                    FeedbackStatus.RESOLVED,
-                    FeedbackStatus.CLOSED
-            );
+    private static final String RETRY_HINT = " Please retry the action.";
+
+    // WITHDRAWN is excluded because only a member can withdraw a case.
+    private static final List<FeedbackStatus> MANAGER_STATUSES = List.of(
+            FeedbackStatus.OPEN,
+            FeedbackStatus.IN_REVIEW,
+            FeedbackStatus.RESOLVED,
+            FeedbackStatus.CLOSED);
 
     private final FeedbackService feedbackService;
 
-    /**
-     * Spring injects FeedbackService through the constructor.
-     */
-    public ManagerFeedbackController(
-            FeedbackService feedbackService) {
-
+    public ManagerFeedbackController(FeedbackService feedbackService) {
         this.feedbackService = feedbackService;
     }
 
-    /**
-     * Displays the manager queue with optional search and filters.
-     *
-     * URL: GET /feedback/manage
-     */
     @GetMapping
     public String showManagerPage(
-
-            @RequestParam(required = false)
-            FeedbackType type,
-
-            @RequestParam(required = false)
-            FeedbackStatus status,
-
-            @RequestParam(required = false)
-            FeedbackPriority priority,
-
-            @RequestParam(required = false)
-            String keyword,
-
+            @RequestParam(required = false) FeedbackType type,
+            @RequestParam(required = false) FeedbackStatus status,
+            @RequestParam(required = false) FeedbackPriority priority,
+            @RequestParam(required = false) String keyword,
             Model model) {
 
-        /*
-         * Remove unnecessary spaces from the keyword.
-         */
-        String cleanKeyword =
-                keyword == null
-                        ? ""
-                        : keyword.trim();
+        String cleanKeyword = keyword == null ? "" : keyword.trim();
+        List<FeedbackItem> items = feedbackService.searchForManager(
+                type, status, priority, cleanKeyword);
 
-        /*
-         * Search active cases using the selected filters.
-         */
-        List<FeedbackItem> items =
-                feedbackService.searchForManager(
-                        type,
-                        status,
-                        priority,
-                        cleanKeyword
-                );
-
-        /*
-         * Add all data required by feedback-manage.html.
-         */
-        addManagerPageData(
-                model,
-                items,
-                type,
-                status,
-                priority,
-                cleanKeyword
-        );
-
+        addManagerPageData(model, items, type, status, priority, cleanKeyword);
         return "feedback-manage";
     }
 
-    /**
-     * Adds a manager reply and notifies the member.
-     *
-     * URL: POST /feedback/manage/{id}/reply
-     */
     @PostMapping("/{id}/reply")
     public String replyToCase(
-
             @PathVariable Long id,
-
-            @Valid
-            @ModelAttribute("replyForm")
-            FeedbackReplyForm replyForm,
-
+            @Valid @ModelAttribute("replyForm") FeedbackReplyForm replyForm,
             BindingResult errors,
-
+            @RequestParam(name = "filterType", required = false) FeedbackType filterType,
+            @RequestParam(name = "filterStatus", required = false) FeedbackStatus filterStatus,
+            @RequestParam(name = "filterPriority", required = false) FeedbackPriority filterPriority,
+            @RequestParam(name = "filterKeyword", required = false) String filterKeyword,
             RedirectAttributes flash) {
 
-        /*
-         * Do not send an invalid reply to the service.
-         */
         if (errors.hasErrors()) {
-
-            flash.addFlashAttribute(
-                    "error",
-                    firstError(errors)
-            );
-
-            return managerRedirect();
+            rememberRetryDraft(flash, id, replyForm.getMessage());
+            flash.addFlashAttribute("error", firstError(errors) + RETRY_HINT);
+            return managerRedirect(flash, filterType, filterStatus, filterPriority, filterKeyword);
         }
 
         try {
-
-            /*
-             * The service saves the reply, changes OPEN to IN_REVIEW
-             * and notifies the member.
-             */
-            feedbackService.replyByManager(
-                    id,
-                    replyForm.getMessage()
-            );
-
-            flash.addFlashAttribute(
-                    "success",
-                    "Reply sent and the member was notified."
-            );
-
+            feedbackService.replyByManager(id, replyForm.getMessage());
+            flash.addFlashAttribute("success", "Reply sent and the member was notified.");
         } catch (FeedbackBusinessException exception) {
-
-            flash.addFlashAttribute(
-                    "error",
-                    exception.getMessage()
-            );
+            rememberRetryDraft(flash, id, replyForm.getMessage());
+            flash.addFlashAttribute("error", exception.getMessage() + RETRY_HINT);
+        } catch (ResponseStatusException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            rememberRetryDraft(flash, id, replyForm.getMessage());
+            flash.addFlashAttribute("error", "The reply could not be sent." + RETRY_HINT);
         }
 
-        return managerRedirect();
+        return managerRedirect(flash, filterType, filterStatus, filterPriority, filterKeyword);
     }
 
-    /**
-     * Updates the workflow status and handling priority.
-     *
-     * URL: POST /feedback/manage/{id}/status
-     */
     @PostMapping("/{id}/status")
     public String updateCase(
-
             @PathVariable Long id,
-
-            @Valid
-            @ModelAttribute("caseUpdateForm")
-            FeedbackCaseUpdateForm caseUpdateForm,
-
+            @Valid @ModelAttribute("caseUpdateForm") FeedbackCaseUpdateForm caseUpdateForm,
             BindingResult errors,
-
+            @RequestParam(name = "filterType", required = false) FeedbackType filterType,
+            @RequestParam(name = "filterStatus", required = false) FeedbackStatus filterStatus,
+            @RequestParam(name = "filterPriority", required = false) FeedbackPriority filterPriority,
+            @RequestParam(name = "filterKeyword", required = false) String filterKeyword,
             RedirectAttributes flash) {
 
-        /*
-         * Status and priority are required.
-         */
         if (errors.hasErrors()) {
-
-            flash.addFlashAttribute(
-                    "error",
-                    firstError(errors)
-            );
-
-            return managerRedirect();
+            flash.addFlashAttribute("error", firstError(errors) + RETRY_HINT);
+            return managerRedirect(flash, filterType, filterStatus, filterPriority, filterKeyword);
         }
 
         try {
-
-            /*
-             * The service validates the status transition
-             * before changing the entity.
-             */
-            feedbackService.updateCase(
-                    id,
-                    caseUpdateForm
-            );
-
-            flash.addFlashAttribute(
-                    "success",
-                    "Case status and priority updated."
-            );
-
+            // Validate the status transition before updating the case.
+            feedbackService.updateCase(id, caseUpdateForm);
+            flash.addFlashAttribute("success", "Case status and priority updated.");
         } catch (FeedbackBusinessException exception) {
-
+            flash.addFlashAttribute("error", exception.getMessage() + RETRY_HINT);
+        } catch (ResponseStatusException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
             flash.addFlashAttribute(
                     "error",
-                    exception.getMessage()
-            );
+                    "The case could not be updated." + RETRY_HINT);
         }
 
-        return managerRedirect();
+        return managerRedirect(flash, filterType, filterStatus, filterPriority, filterKeyword);
     }
 
-    /**
-     * Archives a completed case without deleting its history.
-     *
-     * URL: POST /feedback/manage/{id}/archive
-     */
     @PostMapping("/{id}/archive")
     public String archiveCase(
-
             @PathVariable Long id,
-
+            @RequestParam(name = "filterType", required = false) FeedbackType filterType,
+            @RequestParam(name = "filterStatus", required = false) FeedbackStatus filterStatus,
+            @RequestParam(name = "filterPriority", required = false) FeedbackPriority filterPriority,
+            @RequestParam(name = "filterKeyword", required = false) String filterKeyword,
             RedirectAttributes flash) {
 
         try {
-
-            /*
-             * Only CLOSED and WITHDRAWN cases can be archived.
-             */
+            // Archive the case without deleting its conversation history.
             feedbackService.archive(id);
-
-            flash.addFlashAttribute(
-                    "success",
-                    "Case archived."
-            );
-
+            flash.addFlashAttribute("success", "Case archived.");
         } catch (FeedbackBusinessException exception) {
-
-            flash.addFlashAttribute(
-                    "error",
-                    exception.getMessage()
-            );
+            flash.addFlashAttribute("error", exception.getMessage() + RETRY_HINT);
+        } catch (ResponseStatusException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            flash.addFlashAttribute("error", "The case could not be archived." + RETRY_HINT);
         }
 
-        return managerRedirect();
+        return managerRedirect(flash, filterType, filterStatus, filterPriority, filterKeyword);
     }
 
-    /**
-     * Adds all data required by feedback-manage.html.
-     */
     private void addManagerPageData(
-
             Model model,
-
             List<FeedbackItem> items,
-
             FeedbackType selectedType,
-
             FeedbackStatus selectedStatus,
-
             FeedbackPriority selectedPriority,
-
             String keyword) {
 
-        /*
-         * Add the filtered feedback cases.
-         */
-        model.addAttribute(
-                "items",
-                items
-        );
-
-        /*
-         * Add replies belonging to the displayed cases.
-         */
-        model.addAttribute(
-                "replies",
-                feedbackService.repliesFor(items)
-        );
-
-        /*
-         * Add dashboard counts.
-         */
-        model.addAttribute(
-                "stats",
-                feedbackService.stats()
-        );
-
-        /*
-         * Add values for the search filters.
-         */
-        model.addAttribute(
-                "types",
-                FeedbackType.values()
-        );
-
-        model.addAttribute(
-                "statuses",
-                FeedbackStatus.values()
-        );
-
-        /*
-         * Add only the statuses that a manager may select.
-         */
-        model.addAttribute(
-                "managerStatuses",
-                MANAGER_STATUSES
-        );
-
-        model.addAttribute(
-                "priorities",
-                FeedbackPriority.values()
-        );
-
-        /*
-         * Keep selected filter values visible after searching.
-         */
-        model.addAttribute(
-                "selectedType",
-                selectedType
-        );
-
-        model.addAttribute(
-                "selectedStatus",
-                selectedStatus
-        );
-
-        model.addAttribute(
-                "selectedPriority",
-                selectedPriority
-        );
-
-        model.addAttribute(
-                "keyword",
-                keyword
-        );
+        model.addAttribute("items", items);
+        model.addAttribute("replies", feedbackService.repliesFor(items));
+        model.addAttribute("stats", feedbackService.stats());
+        model.addAttribute("types", FeedbackType.values());
+        model.addAttribute("statuses", FeedbackStatus.values());
+        model.addAttribute("managerStatuses", MANAGER_STATUSES);
+        model.addAttribute("priorities", FeedbackPriority.values());
+        model.addAttribute("selectedType", selectedType);
+        model.addAttribute("selectedStatus", selectedStatus);
+        model.addAttribute("selectedPriority", selectedPriority);
+        model.addAttribute("keyword", keyword);
+        if (!model.containsAttribute("replyForm")) {
+            model.addAttribute("replyForm", new FeedbackReplyForm());
+        }
     }
 
-    /**
-     * Returns the first validation message.
-     */
-    private String firstError(
-            BindingResult errors) {
+    // Keep the reply text after a failed submit so the manager can retry.
+    private void rememberRetryDraft(RedirectAttributes flash, Long caseId, String message) {
+        flash.addFlashAttribute("retryCaseId", caseId);
+        flash.addFlashAttribute("retryMessage", message);
+    }
 
+    private String firstError(BindingResult errors) {
         if (errors.getAllErrors().isEmpty()) {
-
             return "Please check the submitted values.";
         }
-
-        return errors
-                .getAllErrors()
-                .get(0)
-                .getDefaultMessage();
+        return errors.getAllErrors().get(0).getDefaultMessage();
     }
 
-    /**
-     * Keeps every manager POST action on the manager queue page.
-     */
-    private String managerRedirect() {
+    private String managerRedirect(
+            RedirectAttributes flash,
+            FeedbackType type,
+            FeedbackStatus status,
+            FeedbackPriority priority,
+            String keyword) {
 
+        if (type != null) {
+            flash.addAttribute("type", type);
+        }
+        if (status != null) {
+            flash.addAttribute("status", status);
+        }
+        if (priority != null) {
+            flash.addAttribute("priority", priority);
+        }
+        if (keyword != null && !keyword.isBlank()) {
+            flash.addAttribute("keyword", keyword.trim());
+        }
         return "redirect:/feedback/manage";
     }
 }
