@@ -62,6 +62,13 @@
                     </header>
                     <div class="message" th:text="${item.message}">Original message</div>
 
+                    <div class="feedback-thread" th:if="${item.response != null and !#strings.isEmpty(item.response)}">
+                        <h4>Earlier manager response</h4>
+                        <div class="thread-item">
+                            <p th:text="${item.response}">Legacy response</p>
+                        </div>
+                    </div>
+
                     <div class="feedback-thread" th:if="${!#lists.isEmpty(replies[item.id])}">
                         <h4>Conversation</h4>
                         <div class="thread-item" th:each="reply : ${replies[item.id]}">
