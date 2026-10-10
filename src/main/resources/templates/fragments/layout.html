@@ -20,6 +20,12 @@
         <a sec:authorize="hasAnyRole('EVENT_COORDINATOR','MEMBER')" th:href="@{/events}" th:classappend="${active=='events'}?'active'"><span>◉</span>Events</a>
         <a sec:authorize="hasRole('EVENT_COORDINATOR')" th:href="@{/profile}" th:classappend="${active=='profile'}?'active'"><span>♟</span>Profile</a>
 
+        <!-- Member: submit feedback and view their own cases -->
+        <a sec:authorize="hasRole('MEMBER')" h:href="@{/feedback}" th:classappend="${active == 'feedback'} ? 'active' : ''"><span>✉</span>Feedback &amp; Complaints</a>
+
+        <!-- Library manager: review and manage member cases -->
+        <a sec:authorize="hasRole('LIBRARY_MANAGER')" th:href="@{/feedback/manage}" th:classappend="${active == 'feedback-manage'} ? 'active' : ''"><span>✉</span>Feedback &amp; Complaints</a>
+
     </nav>
     <div class="sidebar-user">
         <div class="avatar" th:text="${#strings.substring(currentUser.firstName,0,1)}">M</div>
