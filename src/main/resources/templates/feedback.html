@@ -78,8 +78,17 @@
                         </div>
                     </div>
 
-                    <div class="case-actions" th:if="${item.status.name() == 'OPEN' and #lists.isEmpty(replies[item.id])}">
-                        <a th:href="@{/feedback/{id}/edit(id=${item.id})}" class="btn btn-outline btn-sm">Edit case</a>
+                    <div class="case-actions"
+                         th:if="${item.status.name() == 'OPEN'
+             and #lists.isEmpty(replies[item.id])
+             and (item.response == null
+                  or #strings.isEmpty(#strings.trim(item.response)))}">
+
+                        <a th:href="@{/feedback/{id}/edit(id=${item.id})}"
+                           class="btn btn-outline btn-sm">
+                            Edit case
+                        </a>
+
                     </div>
 
                     <form th:if="${item.status.name() == 'OPEN' or item.status.name() == 'IN_REVIEW'}"
