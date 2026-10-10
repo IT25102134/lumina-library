@@ -22,7 +22,6 @@ ALTER TABLE dbo.feedback_items
         DEFAULT 'GENERAL';
 END;
 
-
 -- 3. Add priority column if missing
 
 IF COL_LENGTH('dbo.feedback_items', 'priority') IS NULL
