@@ -47,9 +47,16 @@ public class FeedbackController {
     // Display the member page with a new form and the member's cases.
     @PreAuthorize("hasRole('MEMBER')")
     @GetMapping("/feedback")
-    public String member(Model model) {
+    public String member(
+            @RequestParam(name = "new", required = false) FeedbackType newType,
+            Model model) {
 
-        model.addAttribute("feedbackForm", new FeedbackForm());
+        FeedbackForm form = new FeedbackForm();
+        if (newType != null) {
+            form.setType(newType);
+        }
+        model.addAttribute("feedbackForm", form);
+        model.addAttribute("showNewForm", newType != null);
         populateMemberPage(model);
 
         return "feedback";
@@ -82,7 +89,8 @@ public class FeedbackController {
             }
         }
 
-        // Keep the user's input and refill the page's other data.
+        // Keep invalid input visible so the member can correct it.
+        model.addAttribute("showNewForm", true);
         populateMemberPage(model);
 
         return "feedback";
@@ -177,6 +185,22 @@ public class FeedbackController {
             flash.addFlashAttribute("error", ex.getMessage());
         }
 
+        return "redirect:/feedback";
+    }
+
+    // Members can complete their own case directly without a reply workflow.
+    @PreAuthorize("hasRole('MEMBER')")
+    @PostMapping("/feedback/{id}/close")
+    public String closeByMember(
+            @PathVariable Long id,
+            RedirectAttributes flash) {
+
+        try {
+            feedbackService.closeByMember(id);
+            flash.addFlashAttribute("success", "Your case has been closed.");
+        } catch (FeedbackBusinessException ex) {
+            flash.addFlashAttribute("error", ex.getMessage());
+        }
         return "redirect:/feedback";
     }
 

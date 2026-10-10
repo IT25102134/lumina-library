@@ -153,6 +153,21 @@ public class FeedbackService {
                 member.getFullName() + " withdrew " + item.getReferenceNumber() + ".");
     }
 
+    /** Close an owned case immediately; preserve its history and block new replies. */
+    public void closeByMember(Long id) {
+        FeedbackItem item = currentMemberItem(id);
+        if (item.getStatus() == FeedbackStatus.CLOSED
+                || item.getStatus() == FeedbackStatus.WITHDRAWN) {
+            throw new FeedbackBusinessException("This case is already closed or withdrawn.");
+        }
+        item.setStatus(FeedbackStatus.CLOSED);
+        item.setResolvedAt(LocalDateTime.now());
+        UserAccount member = currentUserService.get();
+        audit(member, "CLOSE", item, item.getReferenceNumber());
+        notifyManagers("Feedback case closed",
+                member.getFullName() + " closed " + item.getReferenceNumber() + ".");
+    }
+
     public void replyByMember(Long id, String message) {
         FeedbackItem item = currentMemberItem(id);
         assertRepliesAllowed(item);
