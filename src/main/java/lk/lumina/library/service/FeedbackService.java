@@ -113,16 +113,24 @@ public class FeedbackService {
         audit(currentUserService.get(), "EDIT", item, item.getSubject());
     }
 
-    /** A member can edit only an OPEN case with no replies. */
+    /** A member can edit only an OPEN case with no existing conversation. */
     @Transactional(readOnly = true)
     public void assertMemberCanEdit(FeedbackItem item) {
-        boolean reviewStarted = item.getStatus() != FeedbackStatus.OPEN;
+
+        // Review has started if the case is no longer OPEN.
+        boolean reviewStarted =
+                item.getStatus() != FeedbackStatus.OPEN;
+
+        // Check both the new reply table and the earlier response field.
         boolean conversationStarted =
-                replyRepository.existsByFeedbackItemId(item.getId());
+                replyRepository.existsByFeedbackItemId(item.getId())
+                        || (item.getResponse() != null
+                        && !item.getResponse().isBlank());
 
         if (reviewStarted || conversationStarted) {
             throw new FeedbackBusinessException(
-                    "This case can no longer be edited because review has started.");
+                    "This case can no longer be edited because review has started."
+            );
         }
     }
 
