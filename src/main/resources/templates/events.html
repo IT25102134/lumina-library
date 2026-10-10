@@ -1,4 +1,18 @@
-<!DOCTYPE html><html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"><head th:replace="~{fragments/layout :: head('Events')}"></head><body><aside th:replace="~{fragments/layout :: sidebar('events')}"></aside><div class="app-shell"><header th:replace="~{fragments/layout :: topbar('Events & programs','Community calendar')}"></header><main class="content"><div th:replace="~{fragments/layout :: flashes}"></div>
+<!DOCTYPE html><html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"><head th:replace="~{fragments/layout :: head('Events')}"></head><body><aside th:replace="~{fragments/layout :: sidebar('events')}"></aside><div class="app-shell"><header th:replace="~{fragments/layout :: topbar('Events & programs','Community calendar')}"></header>
+    <style>
+        .quick-actions a {
+            display: inline-block;
+            transition: transform .25s,
+                        box-shadow .25s,
+                        background .25s;
+        }
+
+        .quick-actions a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+    <main class="content"><div th:replace="~{fragments/layout :: flashes}"></div>
     <section class="welcome-card" sec:authorize="hasAnyRole('EVENT_COORDINATOR','HEAD_LIBRARIAN')"><span class="eyebrow"><i></i><span th:text="${currentUser.role.displayName}+' workspace'">Workspace</span></span><h2 th:text="'Good to see you, '+${currentUser.firstName}+'.'">Good to see you.</h2><p th:switch="${currentUser.role.name()}"><span th:case="'EVENT_COORDINATOR'">Create thoughtful programs that turn a library into a community.</span><span th:case="*">Shape the collection and keep community programs discoverable and current.</span></p><div class="quick-actions"><a th:href="@{/events/manage/new}">＋ Create event</a></div></section>
     <div class="page-actions"><p>Workshops, reading circles and moments of shared discovery.</p></div>
 
