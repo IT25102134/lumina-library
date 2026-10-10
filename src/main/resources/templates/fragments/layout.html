@@ -21,7 +21,7 @@
         <a sec:authorize="hasRole('EVENT_COORDINATOR')" th:href="@{/profile}" th:classappend="${active=='profile'}?'active'"><span>♟</span>Profile</a>
 
         <!-- Member: submit feedback and view their own cases -->
-        <a sec:authorize="hasRole('MEMBER')" h:href="@{/feedback}" th:classappend="${active == 'feedback'} ? 'active' : ''"><span>✉</span>Feedback &amp; Complaints</a>
+        <a sec:authorize="hasRole('MEMBER')" th:href="@{/feedback}" th:classappend="${active == 'feedback'} ? 'active' : ''"><span>✉</span>Feedback &amp; Complaints</a>
 
         <!-- Library manager: review and manage member cases -->
         <a sec:authorize="hasRole('LIBRARY_MANAGER')" th:href="@{/feedback/manage}" th:classappend="${active == 'feedback-manage'} ? 'active' : ''"><span>✉</span>Feedback &amp; Complaints</a>
