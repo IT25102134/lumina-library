@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Account Settings')}"></head>
+<body>
+<aside th:replace="~{fragments/layout :: sidebar('my-library')}"></aside>
+<div class="app-shell">
+<header th:replace="~{fragments/layout :: topbar('Account Settings', 'Member services')}"></header>
+<main class="content">
+<div th:replace="~{fragments/layout :: flashes}"></div>
+
+<!-- Member Sub-navigation Bar -->
+<nav th:replace="~{fragments/member-nav :: tabs('account')}"></nav>
+
+<!-- Read-only membership info -->
+<section class="panel" style="margin-bottom:24px;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,0.03);overflow:hidden">
+    <div class="panel-head" style="padding:18px 24px;border-bottom:1px solid var(--border,rgba(7,27,34,0.08));display:flex;justify-content:space-between;align-items:center">
+        <h2>Membership information</h2>
+        <span class="status active" th:text="${member.role.displayName}" style="font-size:11px;padding:3px 9px;border-radius:50px">Member</span>
+    </div>
+    <div class="panel-body" style="padding:24px">
+        <div class="form-grid">
+            <label class="field">Member number
+                <input th:value="${member.membershipNumber}" disabled style="font-family:monospace;font-weight:700">
+            </label>
+            <label class="field">Account created
+                <input th:value="${#temporals.format(member.createdAt,'dd MMMM yyyy')}" disabled>
+            </label>
+        </div>
+        <p class="muted" style="font-size:12px;margin:12px 0 0">&#9432; Membership number, security role and account creation date are managed by the library administration.</p>
+    </div>
+</section>
+
+<!-- Personal details -->
+<section class="panel" style="margin-bottom:24px;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,0.03);overflow:hidden">
+    <div class="panel-head" style="padding:18px 24px;border-bottom:1px solid var(--border,rgba(7,27,34,0.08))">
+        <h2>Personal details</h2>
+    </div>
+    <form class="panel-body" th:action="@{/my-library/account/profile}" method="post" style="padding:24px">
+        <div class="form-grid">
+            <label class="field">First name
+                <input name="firstName" th:value="${member.firstName}" required maxlength="80">
+            </label>
+            <label class="field">Last name
+                <input name="lastName" th:value="${member.lastName}" required maxlength="80">
+            </label>
+            <label class="field">Phone <span class="muted">(optional)</span>
+                <input name="phone" type="tel" th:value="${member.phone}" maxlength="30" placeholder="+94 77 123 4567">
+            </label>
+        </div>
+        <div class="form-footer" style="margin-top:20px;display:flex;justify-content:flex-end">
+            <button class="btn btn-amber" type="submit">Save details &rarr;</button>
+        </div>
+    </form>
+</section>
+
+<!-- Change email (requires current password) -->
+<section class="panel" style="margin-bottom:24px;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,0.03);overflow:hidden">
+    <div class="panel-head" style="padding:18px 24px;border-bottom:1px solid var(--border,rgba(7,27,34,0.08))">
+        <h2>Change login email</h2>
+    </div>
+    <form class="panel-body" th:action="@{/my-library/account/change-email}" method="post" style="padding:24px">
+        <p class="muted" style="font-size:13px;margin:0 0 16px">Changing your login email requires your current password. You will be signed out afterwards to verify your credentials.</p>
+        <div class="form-grid">
+            <label class="field">Current email
+                <input th:value="${member.email}" disabled>
+            </label>
+            <label class="field">New email address
+                <input name="newEmail" type="email" required maxlength="180" autocomplete="email" placeholder="new@example.com">
+            </label>
+            <label class="field full">Current password (required to confirm identity)
+                <span class="password-field">
+                    <input id="cp-email" name="currentPassword" type="password" required autocomplete="current-password">
+                    <button class="password-toggle" type="button" data-password-toggle="cp-email" aria-label="Show password" aria-pressed="false">&#128065;</button>
+                </span>
+            </label>
+        </div>
+        <div class="form-footer" style="margin-top:20px;display:flex;justify-content:flex-end">
+            <button class="btn btn-amber" type="submit">Change email &rarr;</button>
+        </div>
+    </form>
+</section>
+
+<!-- Change password (requires current password) -->
+<section class="panel" style="margin-bottom:24px;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,0.03);overflow:hidden">
+    <div class="panel-head" style="padding:18px 24px;border-bottom:1px solid var(--border,rgba(7,27,34,0.08))">
+        <h2>Change password</h2>
+    </div>
+    <form class="panel-body" th:action="@{/my-library/account/change-password}" method="post" style="padding:24px">
+        <p class="muted" style="font-size:13px;margin:0 0 16px">You will be signed out after a successful password change.</p>
+        <div class="form-grid">
+            <label class="field full">Current password
+                <span class="password-field">
+                    <input id="cp-curr" name="currentPassword" type="password" required autocomplete="current-password">
+                    <button class="password-toggle" type="button" data-password-toggle="cp-curr" aria-label="Show password" aria-pressed="false">&#128065;</button>
+                </span>
+            </label>
+            <label class="field">New password
+                <span class="password-field">
+                    <input id="cp-new" name="newPassword" type="password" required minlength="10" maxlength="72" autocomplete="new-password">
+                    <button class="password-toggle" type="button" data-password-toggle="cp-new" aria-label="Show password" aria-pressed="false">&#128065;</button>
+                </span>
+                <small class="field-help">10&ndash;72 characters with upper-case, lower-case and a number.</small>
+            </label>
+            <label class="field">Confirm new password
+                <span class="password-field">
+                    <input id="cp-conf" name="confirmPassword" type="password" required minlength="10" maxlength="72" autocomplete="new-password">
+                    <button class="password-toggle" type="button" data-password-toggle="cp-conf" aria-label="Show password" aria-pressed="false">&#128065;</button>
+                </span>
+            </label>
+        </div>
+        <div class="form-footer" style="margin-top:20px;display:flex;justify-content:flex-end">
+            <button class="btn btn-amber" type="submit">Change password &rarr;</button>
+        </div>
+    </form>
+</section>
+
+<!-- Danger zone -->
+<section class="panel" style="border:1px solid #ef4444;border-radius:14px;box-shadow:0 2px 10px rgba(239,68,68,0.05);overflow:hidden">
+    <div class="panel-head" style="background:#fef2f2;padding:18px 24px">
+        <h2 style="color:#b91c1c;margin:0">Danger zone</h2>
+    </div>
+    <div class="panel-body" style="padding:24px">
+        <p style="color:#b91c1c;font-size:14px;margin:0 0 16px;line-height:1.6">
+            Deactivating your account is a permanent action. Your borrowing history and records will be preserved in library archives, but you will not be able to sign in.
+            All active loans, pending requests, and unpaid fines must be cleared first.
+        </p>
+        <a class="btn btn-danger" th:href="@{/my-library/account/deactivate}">Request account deactivation &rarr;</a>
+    </div>
+</section>
+
+<div style="margin-top:20px">
+    <a class="btn btn-outline" th:href="@{/my-library}">&larr; Back to My Library</a>
+</div>
+
+</main>
+</div>
+</body>
+</html>

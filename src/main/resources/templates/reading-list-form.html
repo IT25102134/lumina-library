@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head(${isNew} ? 'Add to Reading List' : 'Edit Reading Goal')}"></head>
+<body>
+<aside th:replace="~{fragments/layout :: sidebar('my-library')}"></aside>
+<div class="app-shell">
+<header th:replace="~{fragments/layout :: topbar(${isNew} ? 'Add to reading list' : 'Edit reading goal', 'Member services')}"></header>
+<main class="content">
+<div th:replace="~{fragments/layout :: flashes}"></div>
+
+<!-- Member Sub-navigation Bar -->
+<nav th:replace="~{fragments/member-nav :: tabs('reading-list')}"></nav>
+
+<section class="panel form-panel" style="max-width:680px;margin:0 auto;border-radius:14px;box-shadow:0 4px 16px rgba(0,0,0,0.04);overflow:hidden">
+    <div class="panel-head" style="padding:18px 24px;border-bottom:1px solid var(--border,rgba(7,27,34,0.08))">
+        <h2 th:text="${isNew} ? 'New reading list entry' : 'Update reading goal & notes'">Reading goal details</h2>
+        <span class="status" th:text="${isNew} ? 'New bookmark' : 'Editing item'" style="font-size:11px;padding:3px 9px;border-radius:50px">Status</span>
+    </div>
+
+    <form class="panel-body" th:object="${form}" th:action="${isNew} ? @{/my-library/reading-list/save} : @{/my-library/reading-list/{id}/edit(id=${item.id})}" method="post" style="padding:24px">
+        <input type="hidden" name="returnTo" value="reading-list">
+        <div th:if="${#fields.hasAnyErrors()}" class="flash error" role="alert" style="margin-bottom:18px">
+            Please correct the highlighted fields before saving.
+        </div>
+        <div class="form-grid">
+            <!-- Book Selection (for New Entry) -->
+            <label th:if="${isNew}" class="field full">
+                Select book from catalogue
+                <select th:field="*{bookId}" required th:classappend="${#fields.hasErrors('bookId')} ? 'input-error'">
+                    <option value="" disabled selected>Choose an active catalogue title...</option>
+                    <option th:each="b : ${availableBooks}" th:value="${b.id}" th:text="${b.title} + ' by ' + ${b.author} + ' (' + ${b.category} + ')'"></option>
+                </select>
+                <small class="field-error" th:if="${#fields.hasErrors('bookId')}" th:errors="*{bookId}">Book error</small>
+            </label>
+
+            <!-- Book Display (for Editing Existing Entry) -->
+            <div th:if="${!isNew}" class="field full" style="background:var(--paper,#f6f3eb);padding:14px 18px;border-radius:10px;display:flex;align-items:center;gap:14px;border:1px solid var(--border,rgba(7,27,34,0.08))">
+                <img th:src="${item.book.coverUrl}" alt="" style="width:44px;height:62px;object-fit:cover;border-radius:4px;box-shadow:0 2px 4px rgba(0,0,0,0.1)">
+                <div>
+                    <h3 style="font:700 18px var(--serif,serif);margin:0 0 4px;color:var(--ink,#071b22)" th:text="${item.book.title}">Book Title</h3>
+                    <p style="margin:0;font-size:13px;color:var(--muted,#64748b)" th:text="${item.book.author} + ' &bull; ' + ${item.book.category}">Author</p>
+                </div>
+            </div>
+
+            <!-- Reading Status -->
+            <label class="field">
+                Reading status
+                <select th:field="*{status}" required th:classappend="${#fields.hasErrors('status')} ? 'input-error'">
+                    <option value="PLAN_TO_READ">Plan to read</option>
+                    <option value="READING">Currently reading</option>
+                    <option value="COMPLETED">Completed</option>
+                </select>
+                <small class="field-error" th:if="${#fields.hasErrors('status')}" th:errors="*{status}">Status error</small>
+            </label>
+
+            <!-- Priority -->
+            <label class="field">
+                Priority
+                <select th:field="*{priority}" required th:classappend="${#fields.hasErrors('priority')} ? 'input-error'">
+                    <option value="HIGH">High priority</option>
+                    <option value="NORMAL">Normal priority</option>
+                    <option value="LOW">Low priority</option>
+                </select>
+                <small class="field-error" th:if="${#fields.hasErrors('priority')}" th:errors="*{priority}">Priority error</small>
+            </label>
+
+            <!-- Study Notes & Goals -->
+            <label class="field full">
+                Personal reading notes & study goals
+                <textarea th:field="*{notes}" maxlength="500" th:classappend="${#fields.hasErrors('notes')} ? 'input-error'" placeholder="Add private notes, target chapter goals, assignment references, or reflections on this book..." rows="4" style="border-radius:8px"></textarea>
+                <small class="field-help" style="display:flex;justify-content:space-between"><span>Maximum 500 characters</span><span>Private to you</span></small>
+                <small class="field-error" th:if="${#fields.hasErrors('notes')}" th:errors="*{notes}">Notes error</small>
+            </label>
+        </div>
+
+        <div class="form-footer" style="margin-top:20px;display:flex;justify-content:flex-end;gap:12px">
+            <a class="btn btn-outline" th:href="@{/my-library/reading-list}">Cancel</a>
+            <button class="btn btn-amber" type="submit" th:text="${isNew} ? 'Save to reading list &rarr;' : 'Update reading goal &rarr;'">Save</button>
+        </div>
+    </form>
+</section>
+
+</main>
+</div>
+</body>
+</html>

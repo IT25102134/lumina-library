@@ -1,5 +1,306 @@
-<!DOCTYPE html><html lang="en" xmlns:th="http://www.thymeleaf.org"><head th:replace="~{fragments/layout :: head('My Library')}"></head><body><aside th:replace="~{fragments/layout :: sidebar('my-library')}"></aside><div class="app-shell"><header th:replace="~{fragments/layout :: topbar('My library','Member services')}"></header><main class="content"><div th:replace="~{fragments/layout :: flashes}"></div>
-<section class="panel" style="margin-bottom:20px"><div class="panel-head"><h2>Borrowing & requests</h2><a th:href="@{/catalog}" class="btn btn-amber btn-sm">Find another book →</a></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Book</th><th>Requested</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody><tr th:each="loan:${loans}"><td class="title-cell"><img class="mini-cover" th:src="${loan.copy.book.coverUrl}" alt=""><span><b th:text="${loan.copy.book.title}">Title</b><br><small class="muted" th:text="${loan.copy.book.author}">Author</small></span></td><td th:text="${#temporals.format(loan.requestedAt,'dd MMM yyyy')}">Date</td><td th:text="${loan.dueAt==null?'Pending':#temporals.format(loan.dueAt,'dd MMM yyyy')}">Due</td><td><span class="status" th:classappend="${#strings.toLowerCase(loan.status.name())}" th:text="${loan.status}">Status</span></td><td><form th:if="${loan.status.name()=='ACTIVE'&&loan.renewalCount<1}" th:action="@{/my-library/loans/{id}/renew(id=${loan.id})}" method="post"><button class="btn btn-outline btn-sm">Renew</button></form></td></tr><tr th:if="${#lists.isEmpty(loans)}"><td colspan="5" class="empty-state"><strong>Your borrowing story starts here</strong>Browse the catalogue and request an available title.</td></tr></tbody></table></div></section>
-<div class="split-grid"><section class="panel"><div class="panel-head"><h2>Reading list</h2><span class="status" th:text="${#lists.size(readingList)}+' saved'">0</span></div><div class="panel-body stack"><div class="title-cell" th:each="item:${readingList}"><img class="mini-cover" th:src="${item.book.coverUrl}" alt=""><div><b th:text="${item.book.title}">Book</b><br><small class="muted" th:text="${item.book.author}+' · '+${item.book.category}">Author</small></div></div><div th:if="${#lists.isEmpty(readingList)}" class="empty-state"><strong>Save something inspiring</strong>Your reading list is waiting.</div></div></section>
-<section class="panel"><div class="panel-head"><h2>Fines & payments</h2></div><div class="panel-body stack"><div th:each="fine:${fines}" class="notice-item"><i></i><div><h4 th:text="'LKR '+${#numbers.formatDecimal(fine.amount,1,2)}">Amount</h4><p th:text="${fine.loan.copy.book.title}">Book</p><span class="status" th:classappend="${#strings.toLowerCase(fine.status.name())}" th:text="${fine.status}">UNPAID</span></div><form th:if="${fine.status.name()=='UNPAID'}" th:action="@{/fines/{id}/pay(id=${fine.id})}" method="post"><button class="btn btn-amber btn-sm">Pay now</button></form></div><div th:if="${#lists.isEmpty(fines)}" class="empty-state"><strong>No outstanding fines</strong>Your account is in good standing.</div></div></section></div>
-</main></div></body></html>
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('My Library')}"></head>
+<body>
+<aside th:replace="~{fragments/layout :: sidebar('my-library')}"></aside>
+<div class="app-shell">
+<header th:replace="~{fragments/layout :: topbar('My Library', 'Member services')}"></header>
+<main class="content">
+<div th:replace="~{fragments/layout :: flashes}"></div>
+
+<!-- Member Sub-navigation Bar -->
+<nav th:replace="~{fragments/member-nav :: tabs('dashboard')}"></nav>
+
+<!-- Modern VIP Welcome Banner -->
+<div class="member-welcome-hero" style="
+    background: linear-gradient(135deg, #071b22 0%, #0d3442 55%, #10485c 100%);
+    color: #fff; border-radius: 18px; padding: 28px 32px; margin-bottom: 24px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;
+    box-shadow: 0 12px 36px -6px rgba(7,27,34,0.18); position: relative; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.12);">
+    
+    <!-- Decorative geometric background elements -->
+    <div style="position:absolute;right:-40px;top:-40px;width:200px;height:200px;border-radius:50%;border:28px solid rgba(255,255,255,0.04);pointer-events:none"></div>
+    <div style="position:absolute;right:90px;bottom:-60px;width:160px;height:160px;border-radius:50%;border:20px solid rgba(255,255,255,0.03);pointer-events:none"></div>
+
+    <div style="z-index: 1;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:var(--amber,#f59e0b);background:rgba(245,158,11,0.12);padding:3px 10px;border-radius:50px;border:1px solid rgba(245,158,11,0.25)">
+                &#9733; Lumina Member
+            </span>
+            <span style="background:rgba(34,197,94,0.18);color:#86efac;border:1px solid rgba(34,197,94,0.35);border-radius:50px;padding:3px 10px;font-size:11px;font-weight:700">
+                Active Standing
+            </span>
+        </div>
+        <h1 style="font-size:28px;font-weight:800;letter-spacing:-0.02em;margin:0 0 6px;color:#fff">
+            <span id="greeting-time-phrase">Welcome back,</span> <span th:text="${member != null ? member.firstName : 'Reader'}">Reader</span>!
+        </h1>
+        <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.85);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span>Membership Card:</span>
+            <button type="button" onclick="copyMemberCode(this.dataset.code)" th:data-code="${member != null ? member.membershipNumber : 'MEM-0000'}"
+                    style="cursor:pointer;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);padding:3px 10px;border-radius:6px;font-family:monospace;font-weight:700;color:#fff;font-size:13px;display:inline-flex;align-items:center;gap:6px"
+                    title="Click to copy membership number">
+                <span th:text="${member != null ? member.membershipNumber : 'MEM-0000'}">MEM-0000</span>
+                <span style="font-size:11px;opacity:0.8">&#128203;</span>
+            </button>
+            <span th:if="${member != null and member.createdAt != null}" style="opacity:0.75">&bull; Member since <span th:text="${#temporals.format(member.createdAt,'MMMM yyyy')}">Date</span></span>
+        </p>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;z-index:1">
+        <a th:href="@{/my-library/card}" class="btn" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:8px;backdrop-filter:blur(6px);padding:10px 18px">
+            <span>&#129706;</span> Digital ID Card
+        </a>
+        <a th:href="@{/catalog}" class="btn btn-amber btn-sm" style="font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:8px;padding:10px 18px">
+            <span>&#128218;</span> Browse Catalogue &rarr;
+        </a>
+    </div>
+</div>
+
+<!-- Quick Stats Strip -->
+<div class="stats-row" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px">
+    <div class="member-stat-card stat-chip">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <span class="stat-num" style="font-size:28px;font-weight:800;color:var(--ink,#071b22)" th:text="${#lists.size(loans)}">0</span>
+            <span style="font-size:20px;opacity:0.8">&#128218;</span>
+        </div>
+        <span class="stat-label" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted,#64748b);display:block;margin-top:2px">Active / Pending</span>
+        <small class="muted" style="font-size:11px">Borrow requests &amp; books</small>
+    </div>
+
+    <div class="member-stat-card stat-chip">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <span class="stat-num" style="font-size:28px;font-weight:800;color:var(--ink,#071b22)" th:text="${savedCount}">0</span>
+            <span style="font-size:20px;opacity:0.8">&#128214;</span>
+        </div>
+        <span class="stat-label" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted,#64748b);display:block;margin-top:2px">Reading List</span>
+        <small class="muted" style="font-size:11px">Saved study goals</small>
+    </div>
+
+    <div class="member-stat-card stat-chip"
+         th:classappend="${unpaidTotal != null and unpaidTotal.compareTo(T(java.math.BigDecimal).ZERO) > 0} ? 'stat-chip-warn'">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <span class="stat-num" style="font-size:28px;font-weight:800;color:var(--ink,#071b22)" th:text="'LKR ' + ${#numbers.formatDecimal(unpaidTotal != null ? unpaidTotal : 0, 1, 2)}">LKR 0.00</span>
+            <span style="font-size:20px;opacity:0.8">&#128179;</span>
+        </div>
+        <span class="stat-label" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted,#64748b);display:block;margin-top:2px">Unpaid Fines</span>
+        <small th:if="${unpaidTotal == null or unpaidTotal.compareTo(T(java.math.BigDecimal).ZERO) == 0}" class="muted" style="font-size:11px;color:#16a34a">Zero balance &bull; In good standing</small>
+        <small th:if="${unpaidTotal != null and unpaidTotal.compareTo(T(java.math.BigDecimal).ZERO) > 0}" style="font-size:11px;color:#dc2626;font-weight:700">Clear balance to borrow</small>
+    </div>
+
+    <div class="member-stat-card stat-chip">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <span class="stat-num" style="font-size:28px;font-weight:800;color:var(--ink,#071b22)" th:text="${unreadNotifsCount != null ? unreadNotifsCount : 0}">0</span>
+            <span style="font-size:20px;opacity:0.8">&#128276;</span>
+        </div>
+        <span class="stat-label" style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted,#64748b);display:block;margin-top:2px">New Alerts</span>
+        <small class="muted" style="font-size:11px">System notifications</small>
+    </div>
+</div>
+
+<!-- Active loans & requests -->
+<section class="panel" style="margin-bottom:24px;border-radius:16px;box-shadow:0 4px 18px rgba(7,27,34,0.04);overflow:hidden;border:1px solid rgba(7,27,34,0.08)">
+    <div class="panel-head" style="padding:20px 26px;border-bottom:1px solid var(--border,rgba(7,27,34,0.08));display:flex;justify-content:space-between;align-items:center;background:#ffffff">
+        <h2 style="font-size:19px;margin:0">Borrowing & requests</h2>
+        <a th:href="@{/catalog}" class="btn btn-amber btn-sm">+ Request new book &rarr;</a>
+    </div>
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead><tr>
+                <th>Book Title &amp; Author</th><th>Barcode</th><th>Requested</th><th>Due Date</th><th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody>
+            <tr th:each="loan : ${loans}">
+                <td class="title-cell">
+                    <img class="mini-cover" th:src="${loan.copy.book.coverUrl}" alt="" style="width:42px;height:56px;object-fit:cover;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.12)">
+                    <span>
+                        <b style="font-size:14px;color:var(--ink,#071b22)" th:text="${loan.copy.book.title}">Title</b><br>
+                        <small class="muted" style="font-size:12px" th:text="${loan.copy.book.author}">Author</small>
+                    </span>
+                </td>
+                <td><code style="font-weight:700;background:var(--paper,#f6f3eb);padding:3px 8px;border-radius:4px" th:text="${loan.copy.barcode}">LUM-0000</code></td>
+                <td th:text="${#temporals.format(loan.requestedAt,'dd MMM yyyy')}">Date</td>
+                <td>
+                    <span th:if="${loan.dueAt == null}" class="status-tag tag-pending">&#9203; Pending Approval</span>
+                    <span th:if="${loan.dueAt != null}">
+                        <b th:text="${#temporals.format(loan.dueAt,'dd MMM yyyy')}">Due</b>
+                        <th:block th:if="${loan.status.name() == 'ACTIVE'}">
+                            <br>
+                            <span th:if="${loan.dueAt.toLocalDate().isEqual(now.toLocalDate())}" class="status-tag tag-due-today">&#9888; Due today!</span>
+                            <span th:if="${loan.dueAt.isBefore(now)}" class="status-tag tag-overdue"
+                                  th:text="'&#9888; Overdue ' + ${#temporals.format(loan.dueAt,'dd MMM')}">Overdue</span>
+                            <span th:if="${loan.dueAt.isAfter(now) and !loan.dueAt.toLocalDate().isEqual(now.toLocalDate())}"
+                                  th:text="${T(java.time.temporal.ChronoUnit).DAYS.between(now, loan.dueAt)} + ' days remaining'" class="status-tag tag-days-left">Days left</span>
+                        </th:block>
+                    </span>
+                </td>
+                <td>
+                    <span class="status" th:classappend="${#strings.toLowerCase(loan.status.name())}" th:text="${loan.status}"
+                          style="font-size:11px;font-weight:800;padding:4px 10px;border-radius:50px">Status</span>
+                </td>
+                <td style="white-space:nowrap">
+                    <!-- Renew: only ACTIVE, renewalCount=0, not overdue -->
+                    <form th:if="${loan.status.name()=='ACTIVE' and loan.renewalCount < 1 and loan.dueAt != null and loan.dueAt.isAfter(now)}"
+                          th:action="@{/my-library/loans/{id}/renew(id=${loan.id})}" method="post" style="display:inline">
+                        <button class="btn btn-outline btn-sm" type="submit" title="Extend loan period by 7 days">&#8635; Renew 7d</button>
+                    </form>
+                    <!-- Cancel: only REQUESTED -->
+                    <form th:if="${loan.status.name()=='REQUESTED'}"
+                          th:action="@{/my-library/loans/{id}/cancel(id=${loan.id})}" method="post"
+                          style="display:inline"
+                          data-confirm="Cancel this borrow request?">
+                        <button class="btn btn-danger btn-sm" type="submit">&times; Cancel</button>
+                    </form>
+                </td>
+            </tr>
+            <tr th:if="${#lists.isEmpty(loans)}">
+                <td colspan="6" class="empty-state" style="padding:48px 20px;text-align:center">
+                    <div style="font-size:36px;margin-bottom:10px">&#128218;</div>
+                    <strong style="font-size:16px;display:block;margin-bottom:4px">Your borrowing journey starts here</strong>
+                    <span class="muted" style="font-size:13px">Browse our extensive catalogue and request your favorite titles.</span><br>
+                    <a th:href="@{/catalog}" class="btn btn-amber btn-sm" style="margin-top:14px;display:inline-block">Explore Catalogue &rarr;</a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="panel-footer" style="padding:14px 26px;border-top:1px solid var(--border,rgba(7,27,34,0.06));background:rgba(0,0,0,0.01)">
+        <a th:href="@{/my-library/history}" class="muted" style="font-size:13px;font-weight:700;text-decoration:none">&#128203; View complete loan history &rarr;</a>
+    </div>
+</section>
+
+<!-- Split Grid: Reading List Preview & Fines -->
+<div class="split-grid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:24px;margin-bottom:24px">
+
+<!-- Reading list preview -->
+<section class="panel" style="border-radius:16px;box-shadow:0 4px 18px rgba(7,27,34,0.04);overflow:hidden;border:1px solid rgba(7,27,34,0.08)">
+    <div class="panel-head" style="padding:20px 26px;border-bottom:1px solid var(--border,rgba(7,27,34,0.08));display:flex;justify-content:space-between;align-items:center;background:#ffffff">
+        <h2 style="font-size:19px;margin:0">Reading list</h2>
+        <div style="display:flex;gap:8px">
+            <a th:href="@{/my-library/reading-list}" class="btn btn-outline btn-sm">Full list &rarr;</a>
+            <a th:href="@{/my-library/reading-list/save}" class="btn btn-amber btn-sm">+ Add</a>
+        </div>
+    </div>
+    <div class="panel-body stack" style="padding:18px 24px">
+        <div th:each="item : ${readingList}" style="display:flex;align-items:flex-start;gap:14px;padding:12px 0;border-bottom:1px solid var(--border,rgba(7,27,34,0.06))">
+            <img class="mini-cover" th:src="${item.book.coverUrl}" alt="" style="width:38px;height:52px;object-fit:cover;border-radius:6px;box-shadow:0 2px 4px rgba(0,0,0,0.1)">
+            <div style="flex:1">
+                <b th:text="${item.book.title}" style="font-size:14px;color:var(--ink,#071b22)">Book</b><br>
+                <small class="muted" th:text="${item.book.author} + ' &bull; ' + ${item.book.category}">Author</small><br>
+                <div style="margin-top:4px;display:flex;gap:6px;align-items:center">
+                    <span class="status" th:classappend="${#strings.toLowerCase(item.status.name())}" th:text="${item.status.displayName}" style="font-size:10px;padding:2px 7px;border-radius:4px;font-weight:700">Status</span>
+                    <span class="status" th:classappend="${#strings.toLowerCase(item.priority.name())}" th:text="${item.priority.displayName}" style="font-size:10px;padding:2px 7px;border-radius:4px;font-weight:700">Priority</span>
+                </div>
+                <div th:if="${item.notes != null and !#strings.isEmpty(item.notes)}"
+                     style="margin-top:6px;background:var(--paper,#f6f3eb);padding:6px 10px;border-radius:6px;font-size:11px;font-style:italic;color:var(--ink,#071b22);border-left:3px solid var(--amber,#f59e0b)">
+                    &ldquo;<span th:text="${item.notes}">Notes</span>&rdquo;
+                </div>
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0">
+                <a th:href="@{/my-library/reading-list/{id}/edit(id=${item.id})}" class="btn btn-outline btn-sm">Edit</a>
+                <form th:action="@{/my-library/reading-list/{id}/delete(id=${item.id})}" method="post"
+                      data-confirm="Remove this book from your reading list?">
+                    <button class="btn btn-danger btn-sm" type="submit" title="Remove">&times;</button>
+                </form>
+            </div>
+        </div>
+        <div th:if="${#lists.isEmpty(readingList)}" class="empty-state" style="padding:36px 16px;text-align:center">
+            <div style="font-size:32px;margin-bottom:8px">&#128214;</div>
+            <strong style="font-size:15px;display:block">Save your next inspiration</strong>
+            <span class="muted" style="font-size:12px">Track your personal study goals and book reflections here.</span>
+        </div>
+    </div>
+    <div class="panel-footer" style="padding:14px 26px;border-top:1px solid var(--border,rgba(7,27,34,0.06));background:rgba(0,0,0,0.01);display:flex;justify-content:space-between">
+        <a th:href="@{/my-library/reading-list/export}" class="muted" style="font-size:13px;font-weight:700;text-decoration:none">&darr; Export CSV</a>
+        <a th:href="@{/my-library/reading-list}" class="muted" style="font-size:13px;font-weight:700;text-decoration:none">View study challenge &rarr;</a>
+    </div>
+</section>
+
+<!-- Fines & payments -->
+<section class="panel" style="border-radius:16px;box-shadow:0 4px 18px rgba(7,27,34,0.04);overflow:hidden;border:1px solid rgba(7,27,34,0.08)">
+    <div class="panel-head" style="padding:20px 26px;border-bottom:1px solid var(--border,rgba(7,27,34,0.08));display:flex;justify-content:space-between;align-items:center;background:#ffffff">
+        <!-- Fines & payments -->
+        <h2 style="font-size:19px;margin:0">Fines &amp; payments</h2>
+        <span th:if="${unpaidTotal != null and unpaidTotal.compareTo(T(java.math.BigDecimal).ZERO) > 0}"
+              class="status overdue" style="background:#fee2e2;color:#991b1b;padding:4px 12px;border-radius:50px;font-size:11px;font-weight:800;border:1px solid #f87171"
+              th:text="'Total unpaid: LKR ' + ${#numbers.formatDecimal(unpaidTotal,1,2)}">Unpaid</span>
+    </div>
+    <div class="panel-body stack" style="padding:18px 24px">
+        <div th:each="fine : ${fines}" class="notice-item" style="display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border,rgba(7,27,34,0.06))">
+            <div style="flex:1">
+                <h4 th:text="'LKR ' + ${#numbers.formatDecimal(fine.amount,1,2)}" style="margin:0 0 2px;font-size:16px;font-weight:700;color:var(--ink,#071b22)">Amount</h4>
+                <p th:text="${fine.loan.copy.book.title}" style="margin:2px 0;font-size:13px">Book</p>
+                <div style="display:flex;gap:6px;align-items:center;margin-top:2px">
+                    <span class="status" th:classappend="${#strings.toLowerCase(fine.status.name())}"
+                          th:text="${fine.status}" style="font-size:10px;padding:2px 8px;border-radius:4px;font-weight:800">UNPAID</span>
+                    <small th:if="${fine.paidAt != null}" class="muted"
+                           th:text="'Paid ' + ${#temporals.format(fine.paidAt,'dd MMM yyyy')} + ' &bull; Ref: ' + ${fine.reference}">Ref</small>
+                </div>
+            </div>
+            <!-- Demo payment button - only for UNPAID -->
+            <form th:if="${fine.status.name()=='UNPAID'}"
+                  th:action="@{/my-library/fines/{id}/pay(id=${fine.id})}" method="post">
+                <button class="btn btn-amber btn-sm" type="submit"
+                        title="Academic simulation - no real money is charged">
+                    Pay demo fine
+                </button>
+            </form>
+        </div>
+        <div th:if="${#lists.isEmpty(fines)}" class="empty-state" style="padding:36px 16px;text-align:center">
+            <div style="font-size:32px;margin-bottom:8px">&#10004;</div>
+            <strong style="font-size:15px;display:block">No outstanding fines</strong>
+            <span class="muted" style="font-size:12px">Your account is in excellent standing with zero overdue penalties.</span>
+        </div>
+        <p th:if="${!#lists.isEmpty(fines)}" class="muted"
+           style="font-size:12px;padding:10px 0 0;margin:0;border-top:1px solid var(--border)">
+            &#9432; Academic demonstration mode &mdash; no real monetary transactions are processed.
+        </p>
+    </div>
+</section>
+</div>
+
+<!-- Recent notifications -->
+<section class="panel" style="margin-bottom:24px;border-radius:16px;box-shadow:0 4px 18px rgba(7,27,34,0.04);overflow:hidden;border:1px solid rgba(7,27,34,0.08)">
+    <div class="panel-head" style="padding:20px 26px;border-bottom:1px solid var(--border,rgba(7,27,34,0.08));display:flex;justify-content:space-between;align-items:center;background:#ffffff">
+        <h2 style="font-size:19px;margin:0">Notifications</h2>
+        <a th:href="@{/my-library/notifications}" class="btn btn-outline btn-sm">All notifications &rarr;</a>
+    </div>
+    <div class="panel-body stack" style="padding:18px 24px">
+        <div th:each="n : ${notifications}" class="notice-item" th:classappend="${!n.read} ? 'unread-notice'"
+             style="display:flex;align-items:center;gap:16px;padding:14px 16px;border-radius:10px;margin-bottom:8px;background:var(--paper,#f6f3eb)">
+            <div style="font-size:22px">&#128276;</div>
+            <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:8px">
+                    <b th:text="${n.title}" style="font-size:14px;color:var(--ink,#071b22)">Title</b>
+                    <span th:if="${!n.read}" style="background:#ef4444;color:#fff;border-radius:50px;padding:2px 8px;font-size:9px;font-weight:800">NEW</span>
+                </div>
+                <p th:text="${n.message}" style="margin:2px 0 4px;font-size:13px;color:var(--ink,#071b22)">Message</p>
+                <small class="muted" th:text="${#temporals.format(n.createdAt,'dd MMM yyyy HH:mm')}">Time</small>
+            </div>
+            <form th:if="${!n.read}" th:action="@{/my-library/notifications/{id}/read(id=${n.id})}" method="post">
+                <button class="btn btn-outline btn-sm" type="submit">&#10003; Mark read</button>
+            </form>
+        </div>
+        <div th:if="${#lists.isEmpty(notifications)}" class="empty-state" style="padding:36px 16px;text-align:center">
+            <div style="font-size:32px;margin-bottom:8px">&#127881;</div>
+            <strong style="font-size:15px;display:block">All caught up!</strong>
+            <span class="muted" style="font-size:12px">No recent notifications or announcements on your account.</span>
+        </div>
+    </div>
+</section>
+
+<!-- Quick links grid -->
+<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;padding:18px 22px;background:var(--paper,#f6f3eb);border-radius:14px;border:1px solid var(--border,rgba(7,27,34,0.08))">
+    <a class="btn btn-outline btn-sm" th:href="@{/catalog}">&#128218; Catalogue</a>
+    <a class="btn btn-outline btn-sm" th:href="@{/my-library/reading-list}">&#128214; Reading list & goals</a>
+    <a class="btn btn-outline btn-sm" th:href="@{/my-library/history}">&#128203; Borrowing history</a>
+    <a class="btn btn-outline btn-sm" th:href="@{/my-library/card}">&#129706; Membership card</a>
+    <a class="btn btn-outline btn-sm" th:href="@{/events}">&#128197; Events</a>
+    <a class="btn btn-outline btn-sm" th:href="@{/feedback}">&#128172; Feedback</a>
+    <a class="btn btn-outline btn-sm" th:href="@{/my-library/account}">&#9881; Account settings</a>
+</div>
+
+</main>
+</div>
+</body>
+</html>

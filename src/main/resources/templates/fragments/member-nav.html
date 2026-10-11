@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="tabs(active)">
+<style>
+/* Lumina Member Design System - Scoped Styles */
+@keyframes pulseGlow {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    50% { transform: scale(1.08); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+}
+@keyframes shimmerWave {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+.member-subnav-container {
+    background: linear-gradient(180deg, #ffffff 0%, var(--paper, #f8f6f0) 100%);
+    border: 1px solid rgba(7, 27, 34, 0.1);
+    border-radius: 14px;
+    padding: 6px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 16px -2px rgba(7, 27, 34, 0.04);
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+.member-nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    color: var(--ink, #071b22);
+    position: relative;
+}
+.member-nav-link:hover {
+    background: rgba(7, 27, 34, 0.05);
+    transform: translateY(-1px);
+    color: var(--ink, #071b22);
+}
+.member-nav-link.active {
+    background: linear-gradient(135deg, #071b22 0%, #153c48 100%);
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(7, 27, 34, 0.2);
+}
+.member-badge-count {
+    padding: 2px 7px;
+    border-radius: 50px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+}
+.badge-amber {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #ffffff;
+}
+.badge-alert {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #ffffff;
+    animation: pulseGlow 2s infinite ease-in-out;
+}
+.member-stat-card {
+    background: #ffffff;
+    border: 1px solid rgba(7, 27, 34, 0.08);
+    border-radius: 14px;
+    padding: 18px 22px;
+    flex: 1;
+    min-width: 150px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.member-stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px -4px rgba(7, 27, 34, 0.08);
+    border-color: rgba(245, 158, 11, 0.3);
+}
+.status-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 50px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+.tag-due-today { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+.tag-overdue { background: #fee2e2; color: #991b1b; font-weight: 800; border: 1px solid #f87171; }
+.tag-days-left { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+.tag-pending { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+</style>
+
+<nav class="member-subnav-container">
+    <a th:href="@{/my-library}" class="member-nav-link" th:classappend="${active == 'dashboard'} ? 'active'">
+        <span>&#127968;</span> Dashboard
+    </a>
+
+    <a th:href="@{/my-library/reading-list}" class="member-nav-link" th:classappend="${active == 'reading-list'} ? 'active'">
+        <span>&#128214;</span> Reading List &amp; Goals
+        <span th:if="${savedCount != null and savedCount > 0}"
+              class="member-badge-count badge-amber"
+              th:text="${savedCount}">0</span>
+    </a>
+
+    <a th:href="@{/my-library/history}" class="member-nav-link" th:classappend="${active == 'history'} ? 'active'">
+        <span>&#128203;</span> Borrowing History
+    </a>
+
+    <a th:href="@{/my-library/card}" class="member-nav-link" th:classappend="${active == 'card'} ? 'active'">
+        <span>&#129706;</span> Digital Card
+    </a>
+
+    <a th:href="@{/my-library/notifications}" class="member-nav-link" th:classappend="${active == 'notifications'} ? 'active'">
+        <span>&#128276;</span> Notifications
+        <span th:if="${unreadNotifsCount != null and unreadNotifsCount > 0}"
+              class="member-badge-count badge-alert"
+              th:text="${unreadNotifsCount}">0</span>
+    </a>
+
+    <a th:href="@{/my-library/account}" class="member-nav-link" th:classappend="${active == 'account'} ? 'active'">
+        <span>&#9881;</span> Account Settings
+    </a>
+
+    <a th:href="@{/catalog}"
+       style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:10px;text-decoration:none;font-size:12px;font-weight:700;color:#071b22;background:linear-gradient(135deg, rgba(245,158,11,0.18), rgba(245,158,11,0.3));border:1px solid rgba(245,158,11,0.4);transition:all .2s;"
+       onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 12px rgba(245,158,11,0.2)'"
+       onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+        <span>&#128218;</span> Browse Catalogue &rarr;
+    </a>
+</nav>
+
+<script>
+// Interactive Client-side micro-features
+function copyMemberCode(code) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(code).then(() => showToast('Membership ID copied: ' + code));
+    } else {
+        showToast('Membership ID: ' + code);
+    }
+}
+function showToast(msg) {
+    let t = document.getElementById('lumina-toast');
+    if (!t) {
+        t = document.createElement('div');
+        t.id = 'lumina-toast';
+        t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#071b22;color:#fff;padding:12px 20px;border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,0.3);font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;z-index:99999;transition:all 0.3s cubic-bezier(0.16,1,0.3,1);opacity:0;transform:translateY(16px);border:1px solid rgba(245,158,11,0.4);backdrop-filter:blur(10px);';
+        document.body.appendChild(t);
+    }
+    t.innerHTML = '<span style="color:#f59e0b;font-size:16px">&#10004;</span> ' + msg;
+    t.style.opacity = '1';
+    t.style.transform = 'translateY(0)';
+    setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(16px)'; }, 2800);
+}
+document.addEventListener('DOMContentLoaded', () => {
+    const greetingEl = document.getElementById('greeting-time-phrase');
+    if (greetingEl) {
+        const hour = new Date().getHours();
+        if (hour < 12) greetingEl.textContent = 'Good morning,';
+        else if (hour < 17) greetingEl.textContent = 'Good afternoon,';
+        else greetingEl.textContent = 'Good evening,';
+    }
+});
+</script>
+</div>
+</body>
+</html>

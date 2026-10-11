@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Membership Card')}">
+</head>
+<body>
+<aside th:replace="~{fragments/layout :: sidebar('my-library')}"></aside>
+<div class="app-shell">
+<header th:replace="~{fragments/layout :: topbar('Membership Card', 'Member services')}"></header>
+<main class="content">
+<div th:replace="~{fragments/layout :: flashes}"></div>
+
+<!-- Member Sub-navigation Bar -->
+<nav th:replace="~{fragments/member-nav :: tabs('card')}"></nav>
+
+<!-- Clean Print Stylesheet for Physical Wallet Card Dimensions -->
+<style>
+@media print {
+    body { background: #fff !important; color: #000 !important; }
+    aside, header, nav, .btn, .panel:not(.card-printable), .app-shell > header, .card-details-panel { display: none !important; }
+    .app-shell { margin: 0 !important; padding: 0 !important; }
+    .content { margin: 0 !important; padding: 0 !important; }
+    .membership-card-wrap { max-width: 100% !important; margin: 0 !important; }
+    .membership-card {
+        width: 85.6mm !important;
+        height: 53.98mm !important;
+        box-shadow: none !important;
+        border: 2px solid #071b22 !important;
+        background: #071b22 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        margin: 20mm auto !important;
+        page-break-inside: avoid !important;
+        border-radius: 10px !important;
+        padding: 16px 20px !important;
+    }
+}
+</style>
+
+<div class="membership-card-wrap" style="max-width:540px;margin:0 auto">
+    <!-- Luxury Obsidian & Gold Digital Membership Card -->
+    <div class="membership-card" style="
+        background: linear-gradient(135deg, #071b22 0%, #0d3442 45%, #10485c 75%, #071b22 100%);
+        color:#fff; border-radius:20px; padding:34px 38px 28px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5); margin-bottom:28px; position:relative; overflow:hidden;
+        border: 1px solid rgba(255,255,255,0.18);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;">
+
+        <!-- Holographic decorative arcs -->
+        <div style="position:absolute;right:-40px;top:-40px;width:220px;height:220px;border-radius:50%;border:32px solid rgba(255,255,255,.04);pointer-events:none"></div>
+        <div style="position:absolute;right:50px;bottom:-60px;width:170px;height:170px;border-radius:50%;border:24px solid rgba(255,255,255,.03);pointer-events:none"></div>
+
+        <!-- Top Header: Brand & Smart EMV Chip -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">
+            <div>
+                <span style="font-size:11px;letter-spacing:.2em;opacity:.75;text-transform:uppercase;font-weight:700">Lumina Public Library</span><br>
+                <span style="font-size:14px;font-weight:700;color:var(--amber,#f59e0b);letter-spacing:0.02em">Digital Member Card</span>
+            </div>
+            <!-- Simulated EMV Smart Chip (SVG) -->
+            <div style="display:flex;align-items:center;gap:12px">
+                <svg width="42" height="30" viewBox="0 0 46 34" fill="none" xmlns="http://www.w3.org/2000/svg" style="border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,0.3)">
+                    <rect width="46" height="34" rx="5" fill="#eab308" stroke="#ca8a04" stroke-width="0.8"/>
+                    <rect x="5" y="11" width="36" height="12" rx="3" stroke="#a16207" stroke-width="0.8" fill="none"/>
+                    <line x1="16" y1="0" x2="16" y2="34" stroke="#a16207" stroke-width="0.8"/>
+                    <line x1="30" y1="0" x2="30" y2="34" stroke="#a16207" stroke-width="0.8"/>
+                </svg>
+                <div style="font-size:28px;font-weight:800;font-family:var(--serif,serif);color:var(--amber,#f59e0b);letter-spacing:-.02em">L</div>
+            </div>
+        </div>
+
+        <!-- Member Info -->
+        <div style="margin-bottom:22px">
+            <div style="font-size:24px;font-weight:800;letter-spacing:-.01em;margin-bottom:4px;text-shadow:0 2px 4px rgba(0,0,0,0.3)" th:text="${member.fullName}">Member Name</div>
+            <div style="display:flex;align-items:center;gap:10px">
+                <span style="font-size:16px;font-family:monospace;letter-spacing:.08em;font-weight:700;color:rgba(255,255,255,0.95)" th:text="${member.membershipNumber}">MEM-2026-001</span>
+                <button type="button" onclick="copyMemberCode(this.dataset.code)" th:data-code="${member.membershipNumber}"
+                        style="background:rgba(255,255,255,0.18);border:none;color:#fff;border-radius:4px;padding:2px 8px;font-size:11px;cursor:pointer;font-weight:600"
+                        title="Copy Member Number">&#128203; Copy</button>
+            </div>
+        </div>
+
+        <!-- High-contrast Simulated Barcode Strip -->
+        <div style="background:rgba(255,255,255,0.96);border-radius:8px;padding:8px 18px;margin-bottom:24px;display:flex;justify-content:center;align-items:center;gap:3px;height:44px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.15)">
+            <span style="display:inline-block;width:3px;height:28px;background:#000"></span>
+            <span style="display:inline-block;width:1px;height:28px;background:#000"></span>
+            <span style="display:inline-block;width:4px;height:28px;background:#000"></span>
+            <span style="display:inline-block;width:2px;height:28px;background:#000"></span>
+            <span style="display:inline-block;width:1px;height:28px;background:#000"></span>
+            <span style="display:inline-block;width:3px;height:28px;background:#000"></span>
+            <span style="display:inline-block;width:2px;height:28px;background:#000"></span>
+            <span style="display:inline-block;width:4px;height:28px;background:#000"></span>
+            <span style="display:inline-block;width:1px;height:28px;background:#000"></span>
+            <span style="display:inline-block;width:3px;height:28px;background:#000"></span>
+            <span style="display:inline-block;width:2px;height:28px;background:#000"></span>
+            <span style="display:inline-block;width:1px;height:28px;background:#000"></span>
+            <span style="display:inline-block;width:4px;height:28px;background:#000"></span>
+            <span style="display:inline-block;width:2px;height:28px;background:#000"></span>
+            <span style="display:inline-block;width:3px;height:28px;background:#000"></span>
+            <span style="display:inline-block;width:1px;height:28px;background:#000"></span>
+            <span style="display:inline-block;width:2px;height:28px;background:#000"></span>
+            <span style="display:inline-block;width:4px;height:28px;background:#000"></span>
+            <span style="display:inline-block;width:1px;height:28px;background:#000"></span>
+            <span style="display:inline-block;width:3px;height:28px;background:#000"></span>
+        </div>
+
+        <!-- Bottom details: Issue Date & Status -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-end">
+            <div>
+                <div style="font-size:10px;opacity:.65;text-transform:uppercase;letter-spacing:.12em">Member Since</div>
+                <div style="font-size:14px;font-weight:700" th:text="${#temporals.format(member.createdAt,'MMMM yyyy')}">January 2026</div>
+            </div>
+            <div style="text-align:right">
+                <div style="font-size:10px;opacity:.65;text-transform:uppercase;letter-spacing:.12em">Card Status</div>
+                <span th:if="${member.active}" style="background:#22c55e;color:#fff;border-radius:50px;padding:3px 12px;font-size:11px;font-weight:800;letter-spacing:0.04em">ACTIVE</span>
+                <span th:if="${!member.active}" style="background:#ef4444;color:#fff;border-radius:50px;padding:3px 12px;font-size:11px;font-weight:800;letter-spacing:0.04em">INACTIVE</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Official Card Verification details below -->
+    <div class="panel card-details-panel" style="border-radius:16px;box-shadow:0 4px 18px rgba(7,27,34,0.04);overflow:hidden;border:1px solid rgba(7,27,34,0.08)">
+        <div class="panel-head" style="padding:20px 26px;border-bottom:1px solid var(--border,rgba(7,27,34,0.08));background:#ffffff">
+            <h2 style="font-size:19px;margin:0">Card details &amp; verification</h2>
+        </div>
+        <div class="panel-body" style="padding:22px 26px">
+            <table style="width:100%;border-collapse:collapse">
+                <tr style="border-bottom:1px solid var(--border,rgba(7,27,34,0.06))">
+                    <td style="padding:11px 0;color:var(--muted,#64748b);font-size:13px">Full Name</td>
+                    <td style="padding:11px 0;font-weight:700;color:var(--ink,#071b22)" th:text="${member.fullName}">Name</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border,rgba(7,27,34,0.06))">
+                    <td style="padding:11px 0;color:var(--muted,#64748b);font-size:13px">Official Member ID</td>
+                    <td style="padding:11px 0;font-family:monospace;font-weight:700;color:var(--ink,#071b22)" th:text="${member.membershipNumber}">MEM-0000-00000</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border,rgba(7,27,34,0.06))">
+                    <td style="padding:11px 0;color:var(--muted,#64748b);font-size:13px">Date Registered</td>
+                    <td style="padding:11px 0" th:text="${#temporals.format(member.createdAt,'dd MMMM yyyy')}">Date</td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border,rgba(7,27,34,0.06))">
+                    <td style="padding:11px 0;color:var(--muted,#64748b);font-size:13px">Email Address</td>
+                    <td style="padding:11px 0" th:text="${member.email}">email</td>
+                </tr>
+                <tr>
+                    <td style="padding:11px 0;color:var(--muted,#64748b);font-size:13px">Borrowing Privileges</td>
+                    <td style="padding:11px 0">
+                        <span th:if="${member.active}" class="status active" style="font-size:11px;padding:3px 10px;border-radius:50px;font-weight:700">Full Access (Standard 3 Books)</span>
+                        <span th:if="${!member.active}" class="status unpaid" style="font-size:11px;padding:3px 10px;border-radius:50px;font-weight:700">Suspended</span>
+                    </td>
+                </tr>
+            </table>
+            <p style="font-size:12px;color:var(--muted,#64748b);margin:16px 0 0;line-height:1.6">
+                &#9432; Present this digital card on your mobile device or quote your Member Number at the library circulation desk to borrow or renew titles.
+            </p>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="display:flex;gap:12px;margin-top:20px;justify-content:space-between">
+        <a class="btn btn-outline" th:href="@{/my-library}">&larr; Back to My Library</a>
+        <div style="display:flex;gap:10px">
+            <button class="btn btn-outline" type="button" onclick="copyMemberCode('[[${member.membershipNumber}]]')">&#128203; Copy ID</button>
+            <button class="btn btn-amber" onclick="window.print()">&#128424; Print / Save PDF</button>
+        </div>
+    </div>
+</div>
+
+</main>
+</div>
+</body>
+</html>
