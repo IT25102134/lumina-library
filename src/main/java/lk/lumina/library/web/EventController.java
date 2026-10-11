@@ -231,4 +231,17 @@ public class EventController {
 
         return "redirect:/events";
     }
+
+    @ExceptionHandler(NoSuchElementException.class)
+    public String handleNotFound(
+            NoSuchElementException ex,
+            RedirectAttributes flash) {
+
+        flash.addFlashAttribute(
+                "error",
+                "The requested record was not found."
+        );
+
+        return "redirect:/events";
+    }
 }
