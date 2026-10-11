@@ -164,7 +164,9 @@ public class EventController {
         e.setLocation(input.getLocation());
         e.setStartAt(input.getStartAt());
         e.setCapacity(input.getCapacity());
-        e.setStatus(input.getStatus() == null ? EventStatus.PUBLISHED : input.getStatus());
+        e.setStatus(
+                EventStatusManager.getInstance().resolveStatus(input.getStatus())
+        );
 
         events.save(e);
         audit.record(
