@@ -1,2 +1,8 @@
 package lk.lumina.library.model;
-public enum EventStatus { DRAFT, PUBLISHED, COMPLETED, CANCELLED }
+
+public enum EventStatus {
+    DRAFT,
+    PUBLISHED,
+    COMPLETED,
+    CANCELLED
+}
