@@ -1,14 +1,254 @@
-<!DOCTYPE html><html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('Circulation')}"></head><body>
-<aside th:replace="~{fragments/layout :: sidebar('circulation')}"></aside><div class="app-shell">
-<header th:replace="~{fragments/layout :: topbar('Circulation desk','Loans & returns')}"></header><main class="content">
-<div th:replace="~{fragments/layout :: flashes}"></div>
-<section class="panel" style="margin-bottom:20px"><div class="panel-head"><h2>Borrow requests</h2><span class="status requested" th:text="${#lists.size(requests)}+' waiting'">0 waiting</span></div>
-<div class="table-wrap"><table class="data-table"><thead><tr><th>Member</th><th>Book / copy</th><th>Requested</th><th>Eligibility</th><th>Action</th></tr></thead><tbody>
-<tr th:each="loan:${requests}"><td><b th:text="${loan.member.fullName}">Member</b><br><small class="muted" th:text="${loan.member.membershipNumber}">Number</small></td><td><b th:text="${loan.copy.book.title}">Book</b><br><small class="muted" th:text="${loan.copy.barcode}">Copy</small></td><td th:text="${#temporals.format(loan.requestedAt,'dd MMM · HH:mm')}">Date</td><td><span class="status active">Eligible</span></td><td><div class="inline-form"><form th:action="@{/circulation/{id}/issue(id=${loan.id})}" method="post"><button class="btn btn-amber btn-sm">Issue</button></form><form th:action="@{/circulation/{id}/reject(id=${loan.id})}" method="post" data-confirm="Reject this request?"><button class="btn btn-outline btn-sm">Decline</button></form></div></td></tr>
-<tr th:if="${#lists.isEmpty(requests)}"><td colspan="5" class="empty-state"><strong>Desk is clear</strong>No borrow requests are waiting.</td></tr></tbody></table></div></section>
-<section class="panel"><div class="panel-head"><h2>Books currently out</h2><span class="muted" th:text="${#lists.size(currentLoans)}+' active loans'">0</span></div>
-<div class="table-wrap"><table class="data-table"><thead><tr><th>Book</th><th>Member</th><th>Issued</th><th>Due</th><th>Status</th><th>Return</th></tr></thead><tbody>
-<tr th:each="loan:${currentLoans}"><td><b th:text="${loan.copy.book.title}">Book</b><br><small class="muted" th:text="${loan.copy.barcode}">Copy</small></td><td th:text="${loan.member.fullName}">Member</td><td th:text="${#temporals.format(loan.issuedAt,'dd MMM')}">Date</td><td th:text="${#temporals.format(loan.dueAt,'dd MMM yyyy')}">Due</td><td><span class="status" th:classappend="${#strings.toLowerCase(loan.status.name())}" th:text="${loan.status}">Status</span></td><td><form th:action="@{/circulation/{id}/return(id=${loan.id})}" method="post"><button class="btn btn-ink btn-sm">Check in</button></form></td></tr>
-<tr th:if="${#lists.isEmpty(currentLoans)}"><td colspan="6" class="empty-state"><strong>No active loans</strong>Issued books will appear here.</td></tr></tbody></table></div></section>
-</main></div></body></html>
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Circulation')}"></head>
+<body>
+<aside th:replace="~{fragments/layout :: sidebar(${sidebarActive})}"></aside>
+<div class="app-shell">
+    <header th:replace="~{fragments/layout :: topbar(${pageTitle},'Loans & returns')}"></header>
+    <main class="content">
+        <div th:replace="~{fragments/layout :: flashes}"></div>
+
+        <section th:if="${selectedView=='issue'}" class="panel" id="direct-issue" style="margin-bottom:20px;scroll-margin-top:120px">
+            <div class="panel-head">
+                <h2>Direct issue / create loan</h2>
+                <span class="status active">Create</span>
+            </div>
+            <div class="panel-body">
+                <p class="muted">
+                    Use this only when an eligible member asks for an available book at the desk without a previous request.
+                </p>
+                <form class="form-grid" th:action="@{/circulation/direct-issue}" method="post">
+                    <label class="field">
+                        Eligible member
+                        <select name="memberId" required>
+                            <option value="">Select a member…</option>
+                            <option th:each="member:${eligibleMembers}"
+                                    th:value="${member.id}"
+                                    th:text="${member.fullName + ' · ' + member.membershipNumber}">
+                                Member
+                            </option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        Available book copy
+                        <select name="copyId" required>
+                            <option value="">Select an available copy…</option>
+                            <option th:each="copy:${availableCopies}"
+                                    th:value="${copy.id}"
+                                    th:text="${copy.book.title + ' · ' + copy.barcode}">
+                                Book copy
+                            </option>
+                        </select>
+                    </label>
+                    <div class="field full">
+                        <small class="muted" th:text="'Eligibility policy: active membership, no overdue books, no unpaid fines, fewer than ' + ${maxActiveLoans} + ' active loans, and no duplicate open loan for the title.'">
+                            Eligibility policy
+                        </small>
+                    </div>
+                    <div class="form-footer field full">
+                        <button class="btn btn-amber"
+                                type="submit"
+                                th:disabled="${#lists.isEmpty(eligibleMembers) or #lists.isEmpty(availableCopies)}">
+                            Create loan &amp; issue book
+                        </button>
+                    </div>
+                </form>
+                <p class="muted" th:if="${#lists.isEmpty(eligibleMembers)}" style="margin:14px 0 0">
+                    No members currently pass all eligibility checks.
+                </p>
+                <p class="muted" th:if="${#lists.isEmpty(availableCopies)}" style="margin:14px 0 0">
+                    No book copies are currently available for direct issue.
+                </p>
+            </div>
+        </section>
+
+        <section th:if="${selectedView=='issue'}" class="panel" id="borrow-requests" style="margin-bottom:20px;scroll-margin-top:120px">
+            <div class="panel-head">
+                <h2>Borrow requests</h2>
+                <span class="status requested" th:text="${#lists.size(requests)}+' waiting'">0 waiting</span>
+            </div>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>Member</th>
+                        <th>Book / copy</th>
+                        <th>Requested</th>
+                        <th>Eligibility</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="loan:${requests}"
+                        th:with="eligibility=${eligibilityByLoanId[loan.id]}">
+                        <td>
+                            <b th:text="${loan.member.fullName}">Member</b><br>
+                            <small class="muted" th:text="${loan.member.membershipNumber}">Number</small>
+                        </td>
+                        <td>
+                            <b th:text="${loan.copy.book.title}">Book</b><br>
+                            <small class="muted" th:text="${loan.copy.barcode}">Copy</small>
+                        </td>
+                        <td th:text="${#temporals.format(loan.requestedAt,'dd MMM · HH:mm')}">Date</td>
+                        <td>
+                            <span class="status"
+                                  th:classappend="${eligibility.eligible}?'active':'rejected'"
+                                th:text="${eligibility.eligible ? 'Eligible' : eligibility.reason}">
+                                Eligibility
+                            </span>
+                        </td>
+                        <td>
+                            <div class="inline-form">
+                                <form th:action="@{/circulation/{id}/issue(id=${loan.id})}" method="post">
+                                    <button class="btn btn-amber btn-sm"
+                                            th:disabled="${!eligibility.eligible}"
+                                            th:title="${eligibility.eligible ? 'Member passed all eligibility checks' : eligibility.reason}">
+                                        Approve &amp; Issue
+                                    </button>
+                                </form>
+                                <form th:action="@{/circulation/{id}/reject(id=${loan.id})}"
+                                      method="post"
+                                      data-confirm="Reject this request?">
+                                    <button class="btn btn-outline btn-sm">Reject</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(requests)}">
+                        <td colspan="5" class="empty-state">
+                            <strong>Desk is clear</strong>
+                            No borrow requests are waiting.
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section th:if="${selectedView=='renew' or selectedView=='overdue'}" class="panel" id="current-loans" style="margin-bottom:20px;scroll-margin-top:120px">
+            <div class="panel-head">
+                <h2 th:text="${showOverdueOnly}?'Overdue loans':'Books currently out'">Books currently out</h2>
+                <div class="inline-form">
+                    <a th:if="${showOverdueOnly}"
+                       th:href="@{/circulation(view='renew')}"
+                       class="btn btn-outline btn-sm">Show all loans</a>
+                    <span class="muted"
+                          th:text="${#lists.size(currentLoans)}+(${showOverdueOnly}?' overdue loans':' loans out')">
+                        0 loans out
+                    </span>
+                    <span id="overdue-status"
+                          class="status overdue"
+                          style="scroll-margin-top:120px"
+                          th:text="${#lists.size(overdueLoans)}+' overdue'">0 overdue</span>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>Book</th>
+                        <th>Member</th>
+                        <th>Issued</th>
+                        <th>Due</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="loan:${currentLoans}">
+                        <td>
+                            <b th:text="${loan.copy.book.title}">Book</b><br>
+                            <small class="muted" th:text="${loan.copy.barcode}">Copy</small>
+                        </td>
+                        <td th:text="${loan.member.fullName}">Member</td>
+                        <td th:text="${#temporals.format(loan.issuedAt,'dd MMM')}">Date</td>
+                        <td>
+                            <span th:text="${#temporals.format(loan.dueAt,'dd MMM yyyy')}">Due</span><br>
+                            <small class="muted"
+                                   th:if="${loan.renewalCount>0}"
+                                   th:text="'Renewed '+${loan.renewalCount}+' time'">Renewed</small>
+                        </td>
+                        <td>
+                            <span class="status"
+                                  th:classappend="${#strings.toLowerCase(loan.status.name())}"
+                                  th:text="${loan.status}">Status</span>
+                        </td>
+                        <td>
+                            <div class="inline-form">
+                                <form th:if="${loan.renewalCount<1}"
+                                      th:action="@{/circulation/{id}/renew(id=${loan.id})}"
+                                      method="post">
+                                    <input type="hidden" name="view" th:value="${selectedView}">
+                                    <button class="btn btn-outline btn-sm">Renew</button>
+                                </form>
+                                <form th:action="@{/circulation/{id}/return(id=${loan.id})}" method="post">
+                                    <input type="hidden" name="view" th:value="${selectedView}">
+                                    <button class="btn btn-ink btn-sm">Return</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(currentLoans)}">
+                        <td colspan="6" class="empty-state">
+                            <strong th:text="${showOverdueOnly}?'No overdue loans':'No active loans'">
+                                No active loans
+                            </strong>
+                            <span th:text="${showOverdueOnly}?'All current loans are still within their due dates.':'Issued books will appear here.'">
+                                Issued books will appear here.
+                            </span>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section th:if="${selectedView=='history'}" class="panel" id="loan-history" style="scroll-margin-top:120px">
+            <div class="panel-head">
+                <h2>Recent circulation / loan history</h2>
+                <span class="muted" th:text="${#lists.size(loanHistory)}+' records'">0 records</span>
+            </div>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>Book</th>
+                        <th>Member</th>
+                        <th>Issued</th>
+                        <th>Returned</th>
+                        <th>Status</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="loan:${loanHistory}">
+                        <td>
+                            <b th:text="${loan.copy.book.title}">Book</b><br>
+                            <small class="muted" th:text="${loan.copy.barcode}">Copy</small>
+                        </td>
+                        <td th:text="${loan.member.fullName}">Member</td>
+                        <td th:text="${loan.issuedAt==null?'—':#temporals.format(loan.issuedAt,'dd MMM yyyy')}">
+                            Issued
+                        </td>
+                        <td th:text="${loan.returnedAt==null?'—':#temporals.format(loan.returnedAt,'dd MMM yyyy')}">
+                            Returned
+                        </td>
+                        <td>
+                            <span class="status"
+                                  th:classappend="${#strings.toLowerCase(loan.status.name())}"
+                                  th:text="${loan.status}">Status</span>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(loanHistory)}">
+                        <td colspan="5" class="empty-state">
+                            <strong>No circulation history yet</strong>
+                            Processed requests and returned books will remain visible here.
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>
