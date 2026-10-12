@@ -14,7 +14,7 @@
     <a class="brand" th:href="@{/dashboard}"><span class="brand-mark">L</span><span><b>Lumina</b><small>Public Library</small></span></a>
     <nav class="nav-stack">
         <a th:href="@{/dashboard}" th:classappend="${active=='dashboard'}?'active'"><span>⌂</span>Overview</a>
-        <a sec:authorize="hasAnyRole('HEAD_LIBRARIAN','MEMBER')" th:href="@{/catalog}" th:classappend="${active=='catalog'}?'active'"><span>▤</span>Catalogue</a>
+        <a sec:authorize="hasAnyRole('HEAD_LIBRARIAN','MEMBER','LIBRARY_ASSISTANT')" th:href="@{/catalog}" th:classappend="${active=='catalog'}?'active'"><span>▤</span>Catalogue</a>
         <a sec:authorize="hasRole('MEMBER')" th:href="@{/my-library}" th:classappend="${active=='my-library'}?'active'"><span>◫</span>My Library</a>
         <a sec:authorize="hasAnyRole('CIRCULATION_STAFF','HEAD_LIBRARIAN')" th:href="@{/circulation}" th:classappend="${active=='circulation'}?'active'"><span>⇄</span>Circulation</a>
         <a sec:authorize="hasRole('LIBRARY_ASSISTANT')" th:href="@{/inventory}" th:classappend="${active=='inventory'}?'active'"><span>◇</span>Inventory</a>
