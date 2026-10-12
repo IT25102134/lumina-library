@@ -7,7 +7,6 @@ public interface LoanRepository extends JpaRepository<Loan,Long>{
     List<Loan> findAllByOrderByRequestedAtDesc();
     List<Loan> findByMemberIdOrderByRequestedAtDesc(Long memberId);
     List<Loan> findByStatusOrderByRequestedAtAsc(LoanStatus status);
-    List<Loan> findByStatusNotOrderByRequestedAtDesc(LoanStatus status);
     long countByStatus(LoanStatus status);
     long countByStatusAndDueAtBefore(LoanStatus status,LocalDateTime time);
     boolean existsByMemberIdAndCopyBookIdAndStatusIn(Long memberId,Long bookId,Collection<LoanStatus> statuses);
