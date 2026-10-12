@@ -95,6 +95,16 @@ public class FeedbackService {
 
         item.setMember(member);
         copyForm(item, form);
+
+        // Strategy Pattern - Calculate automatic initial priority
+        FeedbackPriority priority =
+                FeedbackPriorityStrategy.calculatePriority(
+                        item.getType(),
+                        item.getCategory()
+                );
+
+        item.setPriority(priority);
+
         item = feedbackRepository.save(item);
 
         // Notify managers and record the submission for audit.
@@ -226,6 +236,38 @@ public class FeedbackService {
                 "Feedback case updated",
                 "The library manager replied to " + item.getReferenceNumber() + ".");
         audit(manager, "RESPOND", item, item.getReferenceNumber());
+    }
+
+    /** Save the manager reply and selected case values atomically. */
+    public void replyAndUpdateByManager(Long id, String message, FeedbackCaseUpdateForm form) {
+        validateCaseUpdateForm(form);
+        FeedbackItem item = managerItem(id);
+        assertRepliesAllowed(item);
+
+        FeedbackStatus oldStatus = item.getStatus();
+        FeedbackStatus newStatus = form.getStatus();
+        FeedbackPriority newPriority = form.getPriority();
+        validateTransition(oldStatus, newStatus);
+
+        // Validate reply before modifying the entity or creating a reply.
+        String cleanedMessage = validateAndCleanReply(message);
+        UserAccount manager = currentUserService.get();
+        replyRepository.save(new FeedbackReply(item, manager, cleanedMessage));
+
+        item.setStatus(newStatus);
+        item.setPriority(newPriority);
+        if (oldStatus != newStatus) {
+            updateCompletionTime(item, newStatus);
+        }
+
+        audit(manager, "RESPOND", item, item.getReferenceNumber());
+        if (oldStatus != newStatus) {
+            audit(manager, "UPDATE", item, newStatus + " / " + newPriority);
+        }
+        notifyMember(item, "Feedback case updated",
+                "The library manager replied to " + item.getReferenceNumber()
+                        + ". Status: " + newStatus.getDisplayName()
+                        + "; priority: " + newPriority.getDisplayName() + ".");
     }
 
     public void updateCase(Long id, FeedbackCaseUpdateForm form) {

@@ -292,40 +292,28 @@ public class FeedbackController {
     public String managerReply(
             @PathVariable Long id,
             @Valid @ModelAttribute("replyForm") FeedbackReplyForm form,
-            BindingResult errors,
+            BindingResult replyErrors,
+            @Valid @ModelAttribute("caseUpdateForm") FeedbackCaseUpdateForm updateForm,
+            BindingResult updateErrors,
             @RequestParam Map<String, String> parameters,
             RedirectAttributes flash) {
 
         keepFilters(parameters, flash);
 
-        if (errors.hasErrors()) {
-
-            keepReply(
-                    flash,
-                    id,
-                    form.getMessage(),
-                    validationMessage(errors)
-            );
-
+        if (replyErrors.hasErrors() || updateErrors.hasErrors()) {
+            String error = replyErrors.hasErrors()
+                    ? validationMessage(replyErrors)
+                    : validationMessage(updateErrors);
+            keepReply(flash, id, form.getMessage(), error);
         } else {
             try {
-                feedbackService.replyByManager(id, form.getMessage());
-
-                flash.addFlashAttribute(
-                        "success",
-                        "Reply sent and member notified."
-                );
-
+                feedbackService.replyAndUpdateByManager(id, form.getMessage(), updateForm);
+                flash.addFlashAttribute("success",
+                        "Reply sent; status and priority updated. Member notified.");
             } catch (FeedbackBusinessException ex) {
-                keepReply(
-                        flash,
-                        id,
-                        form.getMessage(),
-                        ex.getMessage()
-                );
+                keepReply(flash, id, form.getMessage(), ex.getMessage());
             }
         }
-
         return "redirect:/feedback/manage";
     }
 
