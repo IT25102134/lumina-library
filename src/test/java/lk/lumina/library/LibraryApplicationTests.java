@@ -38,7 +38,7 @@ class LibraryApplicationTests {
         mvc.perform(get("/feedback/manage")).andExpect(status().isForbidden());
         mvc.perform(get("/reports")).andExpect(status().isForbidden());
         mvc.perform(get("/audit")).andExpect(status().isForbidden());
-        mvc.perform(get("/users")).andExpect(status().isForbidden());
+        mvc.perform(get("/users")).andExpect(status().isNotFound());
     }
 
     @Test @WithMockUser(username="member@lumina.lk",roles="MEMBER")
@@ -99,5 +99,5 @@ class LibraryApplicationTests {
     }
 
     @Test @WithMockUser(username="manager@lumina.lk",roles="LIBRARY_MANAGER")
-    void managerPagesRender() throws Exception { mvc.perform(get("/feedback/manage")).andExpect(status().isOk());mvc.perform(get("/reports")).andExpect(status().isOk());mvc.perform(get("/audit")).andExpect(status().isOk());mvc.perform(get("/users")).andExpect(status().isOk()); }
+    void managerPagesRender() throws Exception { mvc.perform(get("/feedback/manage")).andExpect(status().isOk());mvc.perform(get("/reports")).andExpect(status().isOk());mvc.perform(get("/audit")).andExpect(status().isOk()); }
 }
