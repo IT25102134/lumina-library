@@ -24,6 +24,7 @@
     <a class="brand" th:href="@{/dashboard}"><span class="brand-mark">L</span><span><b>Lumina</b><small>Public Library</small></span></a>
     <nav class="nav-stack">
         <a sec:authorize="!hasRole('EVENT_COORDINATOR')" th:href="@{/dashboard}" th:classappend="${active=='dashboard'}?'active'"><span>⌂</span>Overview</a>
+        <!-- Shows Catalogue navigation only to Head Librarians and members; active highlights the current catalogue screen. -->
         <a sec:authorize="hasAnyRole('HEAD_LIBRARIAN','MEMBER')" th:href="@{/catalog}" th:classappend="${active=='catalog'}?'active'"><span>▤</span>Catalogue</a>
         <a sec:authorize="hasRole('MEMBER')" th:href="@{/my-library}" th:classappend="${active=='my-library'}?'active'"><span>◫</span>My Library</a>
         <a sec:authorize="hasAnyRole('EVENT_COORDINATOR','MEMBER')" th:href="@{/events}" th:classappend="${active=='events'}?'active'"><span>◉</span>Events</a>

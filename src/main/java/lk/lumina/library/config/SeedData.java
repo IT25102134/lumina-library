@@ -27,11 +27,14 @@ public class SeedData {
                 account("Dinuka","Senanayake","manager@lumina.lk",password,Role.LIBRARY_MANAGER,"STAFF-006"));
             users.saveAll(staff);
 
+            // Creates the initial catalogue titles shown when a new database is first seeded.
             Book b1=book("9780141439600","A Tale of Two Cities","Charles Dickens","Classics","Penguin Classics",1859,"A sweeping story of sacrifice and renewal across London and Paris.","https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=700&q=80");
             Book b2=book("9780061120084","To Kill a Mockingbird","Harper Lee","Literary Fiction","Harper Perennial",1960,"A timeless exploration of courage, justice and compassion.","https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=700&q=80");
             Book b3=book("9780553380163","A Brief History of Time","Stephen Hawking","Science","Bantam",1988,"An accessible journey through space, time and the universe.","https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?auto=format&fit=crop&w=700&q=80");
             Book b4=book("9781612681139","The Midnight Library","Matt Haig","Contemporary Fiction","Canongate",2020,"A hopeful story about possibility, regret and the lives we choose.","https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&w=700&q=80");
+            // Persists the four bibliographic records before physical copies reference them.
             books.saveAll(List.of(b1,b2,b3,b4));
+            // Seeds physical copies whose AVAILABLE status drives each catalogue card's availability count.
             copies.saveAll(List.of(
                 new BookCopy(b1,"LUM-0001","A-01-01"),new BookCopy(b1,"LUM-0002","A-01-01"),
                 new BookCopy(b2,"LUM-0003","B-02-04"),new BookCopy(b3,"LUM-0004","C-04-02"),
@@ -44,5 +47,6 @@ public class SeedData {
         };
     }
     private UserAccount account(String f,String l,String e,String p,Role r,String number){UserAccount u=new UserAccount(f,l,e,p,r);u.setMembershipNumber(number);return u;}
+    // Builds one Book entity from the seed catalogue metadata without duplicating field-assignment code.
     private Book book(String isbn,String title,String author,String category,String publisher,int year,String description,String cover){Book b=new Book(isbn,title,author,category);b.setPublisher(publisher);b.setPublicationYear(year);b.setDescription(description);b.setCoverUrl(cover);return b;}
 }
