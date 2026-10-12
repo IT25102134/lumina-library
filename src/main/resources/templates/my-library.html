@@ -98,6 +98,42 @@
     </div>
 </div>
 
+<!-- 2026 Reading Goal Challenge Progress Card -->
+<div class="reading-goal-card" style="
+    background: #ffffff; border: 1px solid rgba(7,27,34,0.08); border-radius: 16px;
+    padding: 20px 24px; margin-bottom: 24px; box-shadow: 0 4px 18px rgba(7,27,34,0.04);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 18px;">
+    <div style="display:flex;align-items:center;gap:16px">
+        <div style="width:48px;height:48px;border-radius:12px;background:#fef3c7;display:grid;place-items:center;font-size:24px;color:#d97706;flex-shrink:0">
+            &#127942;
+        </div>
+        <div>
+            <div style="display:flex;align-items:center;gap:8px">
+                <h3 style="margin:0;font-size:16px;font-weight:700;color:var(--ink,#071b22)">2026 Annual Reading Challenge</h3>
+                <span style="font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;padding:2px 8px;border-radius:20px;background:#dbeafe;color:#1e40af">
+                    Member Goal
+                </span>
+            </div>
+            <p style="margin:3px 0 0;font-size:12.5px;color:var(--muted,#64748b)">
+                You've completed <b style="color:var(--ink,#071b22)" th:text="${completedBooksCount}">0</b> of <b style="color:var(--ink,#071b22)" th:text="${annualGoal}">12</b> books this year!
+            </p>
+        </div>
+    </div>
+    <div style="flex:1;min-width:200px;max-width:320px">
+        <div style="display:flex;justify-content:space-between;font-size:11.5px;font-weight:700;margin-bottom:6px">
+            <span style="color:var(--muted,#64748b)">Challenge Progress</span>
+            <span style="color:#d97706" th:text="${goalProgressPct} + '%'">0%</span>
+        </div>
+        <div style="height:10px;border-radius:10px;background:#f1f5f9;overflow:hidden">
+            <div style="height:100%;border-radius:10px;background:linear-gradient(90deg, #f59e0b, #d97706);transition:width 0.5s ease"
+                 th:style="'width:' + ${goalProgressPct} + '%;height:100%;border-radius:10px;background:linear-gradient(90deg, #f59e0b, #d97706)'"></div>
+        </div>
+    </div>
+    <a th:href="@{/my-library/reading-list}" class="btn btn-outline btn-sm" style="font-weight:700">
+        Manage Books &rarr;
+    </a>
+</div>
+
 <!-- Active loans & requests -->
 <section class="panel" style="margin-bottom:24px;border-radius:16px;box-shadow:0 4px 18px rgba(7,27,34,0.04);overflow:hidden;border:1px solid rgba(7,27,34,0.08)">
     <div class="panel-head" style="padding:20px 26px;border-bottom:1px solid var(--border,rgba(7,27,34,0.08));display:flex;justify-content:space-between;align-items:center;background:#ffffff">
@@ -139,6 +175,12 @@
                           style="font-size:11px;font-weight:800;padding:4px 10px;border-radius:50px">Status</span>
                 </td>
                 <td style="white-space:nowrap">
+                    <!-- Calendar Due Date Reminder -->
+                    <a th:if="${loan.status.name()=='ACTIVE' and loan.dueAt != null}"
+                       th:href="@{/my-library/loans/{id}/calendar(id=${loan.id})}"
+                       class="btn btn-outline btn-sm"
+                       style="display:inline-flex;align-items:center;gap:4px"
+                       title="Download iCalendar (.ics) due date reminder">&#128197; Calendar</a>
                     <!-- Renew: only ACTIVE, renewalCount=0, not overdue -->
                     <form th:if="${loan.status.name()=='ACTIVE' and loan.renewalCount < 1 and loan.dueAt != null and loan.dueAt.isAfter(now)}"
                           th:action="@{/my-library/loans/{id}/renew(id=${loan.id})}" method="post" style="display:inline">
@@ -245,6 +287,13 @@
                     Pay demo fine
                 </button>
             </form>
+            <!-- View official receipt voucher - for PAID -->
+            <a th:if="${fine.status.name()=='PAID'}"
+               th:href="@{/my-library/fines/{id}/receipt(id=${fine.id})}"
+               class="btn btn-outline btn-sm"
+               style="display:inline-flex;align-items:center;gap:5px;font-weight:700">
+                <span>&#129534;</span> Receipt
+            </a>
         </div>
         <div th:if="${#lists.isEmpty(fines)}" class="empty-state" style="padding:36px 16px;text-align:center">
             <div style="font-size:32px;margin-bottom:8px">&#10004;</div>
