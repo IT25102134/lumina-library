@@ -20,4 +20,5 @@ public class LibraryEvent {
     public LocalDateTime getStartAt(){return startAt;} public void setStartAt(LocalDateTime v){startAt=v;}
     public int getCapacity(){return capacity;} public void setCapacity(int v){capacity=v;}
     public EventStatus getStatus(){return status;} public void setStatus(EventStatus v){status=v;}
+    @Transient public boolean isPast(){return startAt!=null && startAt.isBefore(LocalDateTime.now());}
 }
