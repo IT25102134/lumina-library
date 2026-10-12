@@ -1,30 +1,141 @@
 package lk.lumina.library.web;
 
 import java.math.BigDecimal;
-import java.time.*;
-import java.time.temporal.ChronoUnit;
+import java.time.LocalDateTime;
 import lk.lumina.library.model.*;
-import lk.lumina.library.observer.LoanEvent;
-import lk.lumina.library.observer.LoanEventPublisher;
 import lk.lumina.library.repository.*;
-import lk.lumina.library.service.*;
+import lk.lumina.library.service.CirculationService;
+import org.springframework.dao.ConcurrencyFailureException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-@Controller @RequestMapping("/circulation") @PreAuthorize("hasRole('CIRCULATION_STAFF')")
+/** Only the Circulation desk uses this controller; shared module code is unchanged. */
+@Controller
+@RequestMapping("/circulation")
+@PreAuthorize("hasRole('CIRCULATION_STAFF')")
 public class CirculationController {
-    private final LoanRepository loans;private final BookCopyRepository copies;private final FinePaymentRepository fines;private final CurrentUserService current;private final LoanEventPublisher loanEvents;
-    public CirculationController(LoanRepository loans,BookCopyRepository copies,FinePaymentRepository fines,CurrentUserService current,LoanEventPublisher loanEvents){this.loans=loans;this.copies=copies;this.fines=fines;this.current=current;this.loanEvents=loanEvents;}
-    @GetMapping String page(Model model){refreshOverdue();var active=loans.findByStatusOrderByRequestedAtAsc(LoanStatus.ACTIVE);var overdue=loans.findByStatusOrderByRequestedAtAsc(LoanStatus.OVERDUE);var currentLoans=new java.util.ArrayList<Loan>(active);currentLoans.addAll(overdue);model.addAttribute("requests",loans.findByStatusOrderByRequestedAtAsc(LoanStatus.REQUESTED));model.addAttribute("activeLoans",active);model.addAttribute("overdueLoans",overdue);model.addAttribute("currentLoans",currentLoans);return "circulation";}
-    @Transactional @PostMapping("/{id}/issue") String issue(@PathVariable Long id,RedirectAttributes flash){Loan l=loans.findById(id).orElseThrow();if(l.getStatus()!=LoanStatus.REQUESTED){flash.addFlashAttribute("error","This request has already been processed.");return "redirect:/circulation";}l.setStatus(LoanStatus.ACTIVE);LocalDateTime issued=LocalDateTime.now();l.setIssuedAt(issued);l.setDueAt(dueAt(issued));l.getCopy().setStatus(BookCopyStatus.LOANED);copies.save(l.getCopy());loans.save(l);publish(l,"ISSUE","Book ready","“"+l.getCopy().getBook().getTitle()+"” has been issued. Due "+l.getDueAt().toLocalDate()+".",NotificationType.SUCCESS);flash.addFlashAttribute("success","Book issued successfully.");return "redirect:/circulation";}
-    @Transactional @PostMapping("/{id}/reject") String reject(@PathVariable Long id,RedirectAttributes flash){Loan l=loans.findById(id).orElseThrow();l.setStatus(LoanStatus.REJECTED);l.getCopy().setStatus(BookCopyStatus.AVAILABLE);copies.save(l.getCopy());loans.save(l);publish(l,"REJECT","Request update","Your request for “"+l.getCopy().getBook().getTitle()+"” could not be approved.",NotificationType.WARNING);flash.addFlashAttribute("success","Request rejected and copy released.");return "redirect:/circulation";}
-    @Transactional @PostMapping("/{id}/return") String returned(@PathVariable Long id,RedirectAttributes flash){Loan l=loans.findById(id).orElseThrow();LocalDateTime returned=LocalDateTime.now();BigDecimal fineAmount=overdueFine(l.getDueAt(),returned);l.setStatus(LoanStatus.RETURNED);l.setReturnedAt(returned);l.getCopy().setStatus(BookCopyStatus.AVAILABLE);copies.save(l.getCopy());loans.save(l);if(fineAmount.signum()>0){FinePayment fine=new FinePayment();fine.setLoan(l);fine.setMember(l.getMember());fine.setAmount(fineAmount);fines.save(fine);publish(l,"RETURN","Overdue fine created","A fine of LKR "+fine.getAmount()+" was added for the returned book.",NotificationType.PAYMENT);}else{publish(l,"RETURN",null,null,null);}flash.addFlashAttribute("success",fineAmount.signum()>0?"Book returned; overdue fine calculated.":"Book returned successfully.");return "redirect:/circulation";}
-    static LocalDateTime dueAt(LocalDateTime issuedAt){return issuedAt.plusDays(14);}
-    static BigDecimal overdueFine(LocalDateTime dueAt,LocalDateTime returnedAt){if(dueAt==null)return BigDecimal.ZERO;long overdueDays=Math.max(0,ChronoUnit.DAYS.between(dueAt.toLocalDate(),returnedAt.toLocalDate()));return BigDecimal.valueOf(overdueDays*25L);}
-    private void refreshOverdue(){loans.findByStatusOrderByRequestedAtAsc(LoanStatus.ACTIVE).stream().filter(l->l.getDueAt()!=null&&l.getDueAt().isBefore(LocalDateTime.now())).forEach(l->{l.setStatus(LoanStatus.OVERDUE);loans.save(l);});}
-    private void publish(Loan loan,String action,String title,String message,NotificationType type){loanEvents.publish(new LoanEvent(loan,current.get().getEmail(),action,title,message,type));}
+    private final LoanRepository loans;
+    private final UserAccountRepository users;
+    private final BookCopyRepository copies;
+    private final FinePaymentRepository fines;
+    private final CirculationService circulation;
+
+    public CirculationController(LoanRepository loans, UserAccountRepository users,
+            BookCopyRepository copies, FinePaymentRepository fines, CirculationService circulation) {
+        this.loans = loans;
+        this.users = users;
+        this.copies = copies;
+        this.fines = fines;
+        this.circulation = circulation;
+    }
+
+    @GetMapping
+    String page(Model model) {
+        circulation.refreshOverdue();
+        var all = loans.findAllByOrderByRequestedAtDesc();
+        model.addAttribute("requests", all.stream().filter(l -> l.getStatus() == LoanStatus.REQUESTED).toList());
+        model.addAttribute("currentLoans", all.stream().filter(l ->
+                l.getStatus() == LoanStatus.ACTIVE || l.getStatus() == LoanStatus.OVERDUE).toList());
+        model.addAttribute("history", all.stream().filter(l ->
+                l.getStatus() == LoanStatus.RETURNED || l.getStatus() == LoanStatus.REJECTED).toList());
+        model.addAttribute("members", users.findByRole(Role.MEMBER).stream()
+                .filter(UserAccount::isActive).sorted(java.util.Comparator.comparing(UserAccount::getFullName)).toList());
+        model.addAttribute("availableCopies", copies.findAllByOrderByBarcodeAsc().stream()
+                .filter(c -> c.getStatus() == BookCopyStatus.AVAILABLE && c.getBook().isActive()).toList());
+        model.addAttribute("fineLoanIds", fines.findAll().stream().map(f -> f.getLoan().getId()).toList());
+        return "circulation";
+    }
+
+    // CREATE: existing member/copy IDs, without registering members or adding inventory.
+    @PostMapping("/create")
+    String create(@RequestParam Long memberId, @RequestParam Long copyId, RedirectAttributes flash) {
+        var loan = circulation.create(memberId, copyId);
+        flash.addFlashAttribute("success", "Loan #" + loan.getId() + " created and book issued. Due "
+                + loan.getDueAt().toLocalDate() + ".");
+        return "redirect:/circulation";
+    }
+
+    @GetMapping("/{id}/edit")
+    String edit(@PathVariable Long id, Model model) {
+        model.addAttribute("loan", circulation.editable(id));
+        return "circulation-edit";
+    }
+
+    // UPDATE: the original member/copy stay fixed; the due date is editable.
+    @PostMapping("/{id}/update")
+    String update(@PathVariable Long id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dueAt,
+            RedirectAttributes flash) {
+        circulation.updateDueDate(id, dueAt);
+        flash.addFlashAttribute("success", "Loan due date updated.");
+        return "redirect:/circulation";
+    }
+
+    @PostMapping("/{id}/renew")
+    String renew(@PathVariable Long id, RedirectAttributes flash) {
+        circulation.renew(id);
+        flash.addFlashAttribute("success", "Loan renewed for 7 days.");
+        return "redirect:/circulation";
+    }
+
+    @PostMapping("/{id}/delete")
+    String delete(@PathVariable Long id, RedirectAttributes flash) {
+        circulation.delete(id);
+        flash.addFlashAttribute("success", "Loan deleted. Any pending reserved copy has been released.");
+        return "redirect:/circulation";
+    }
+
+    @PostMapping("/{id}/issue")
+    String issue(@PathVariable Long id, RedirectAttributes flash) {
+        circulation.issue(id);
+        flash.addFlashAttribute("success", "Book issued successfully.");
+        return "redirect:/circulation";
+    }
+
+    @PostMapping("/{id}/reject")
+    String reject(@PathVariable Long id, RedirectAttributes flash) {
+        circulation.reject(id);
+        flash.addFlashAttribute("success", "Request rejected and copy released.");
+        return "redirect:/circulation";
+    }
+
+    @PostMapping("/{id}/return")
+    String returned(@PathVariable Long id, RedirectAttributes flash) {
+        BigDecimal fine = circulation.returned(id);
+        flash.addFlashAttribute("success", fine.signum() > 0
+                ? "Book returned; overdue fine of LKR " + fine + " calculated." : "Book returned successfully.");
+        return "redirect:/circulation";
+    }
+
+    // Error handling applies to this controller only.
+    @ExceptionHandler(IllegalArgumentException.class)
+    String invalid(IllegalArgumentException ex, RedirectAttributes flash) {
+        flash.addFlashAttribute("error", ex.getMessage());
+        return "redirect:/circulation";
+    }
+
+    @ExceptionHandler({MethodArgumentTypeMismatchException.class, MissingServletRequestParameterException.class})
+    String invalidForm(Exception ex, RedirectAttributes flash) {
+        flash.addFlashAttribute("error", "Select a valid member/copy and enter a valid date and time.");
+        return "redirect:/circulation";
+    }
+
+    @ExceptionHandler({DataIntegrityViolationException.class, ConcurrencyFailureException.class})
+    String conflictingChange(Exception ex, RedirectAttributes flash) {
+        flash.addFlashAttribute("error", "This record changed or is linked to another record. Refresh the desk and try again.");
+        return "redirect:/circulation";
+    }
+
+    // Keep the existing rule tests and original policy.
+    static LocalDateTime dueAt(LocalDateTime issuedAt) { return CirculationService.dueAt(issuedAt); }
+    static BigDecimal overdueFine(LocalDateTime dueAt, LocalDateTime returnedAt) {
+        return CirculationService.overdueFine(dueAt, returnedAt);
+    }
 }

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Edit loan')}"></head>
+<body>
+<aside th:replace="~{circulation/fragments :: sidebar('circulation')}"></aside>
+<div class="app-shell">
+<header th:replace="~{fragments/layout :: topbar('Edit loan','Circulation desk')}"></header>
+<main class="content">
+<div th:replace="~{fragments/layout :: flashes}"></div>
+<section class="panel form-panel">
+<div class="panel-head"><h2 th:text="'Edit loan #'+${loan.id}">Edit loan</h2><a class="btn btn-outline btn-sm" th:href="@{/circulation}">Back to desk</a></div>
+<div class="panel-body">
+<p><b th:text="${loan.copy.book.title}">Book</b><br><span class="muted" th:text="${loan.copy.barcode}">Copy</span></p>
+<p>Member: <b th:text="${loan.member.fullName}">Member</b><br>Issued: <span th:text="${#temporals.format(loan.issuedAt,'dd MMM yyyy · HH:mm')}">Date</span></p>
+<form th:action="@{/circulation/{id}/update(id=${loan.id})}" method="post" data-circulation-due-form novalidate>
+<div class="field"><label for="dueAt">Due date and time</label><input id="dueAt" name="dueAt" type="datetime-local" required
+th:min="${#temporals.format(loan.issuedAt.plusMinutes(1),'yyyy-MM-dd') + 'T' + #temporals.format(loan.issuedAt.plusMinutes(1),'HH:mm')}"
+th:value="${loan.dueAt != null ? #temporals.format(loan.dueAt,'yyyy-MM-dd') + 'T' + #temporals.format(loan.dueAt,'HH:mm') : ''}"
+aria-describedby="dueAt-error"><small id="dueAt-error" class="due-date-error" aria-live="polite"></small></div>
+<p class="muted" style="margin-top:16px">The due date must be after the issue date. Member and book copy stay attached to this loan. The status changes to ACTIVE or OVERDUE based on the new due date.</p>
+<div class="form-footer"><a class="btn btn-outline" th:href="@{/circulation}">Cancel</a><button class="btn btn-amber">Save changes</button></div>
+</form>
+</div></section>
+</main></div>
+<style>
+.due-date-error{display:none;margin-top:6px;color:#943f39;font-size:10px;font-weight:600;
+letter-spacing:0;text-transform:none;line-height:1.4}.due-date-error.visible{display:block}
+.field input.due-date-input-error{border-color:#b44d45;background:#fff8f7;
+box-shadow:0 0 0 3px rgba(180,77,69,.12)}
+</style>
+<script defer th:src="@{/js/circulation/due-date-validation.js}"></script>
+</body></html>

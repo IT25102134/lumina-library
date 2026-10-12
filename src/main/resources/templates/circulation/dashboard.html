@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Dashboard')}"></head>
+<body>
+<aside th:replace="~{circulation/fragments :: sidebar('dashboard')}"></aside>
+<div class="app-shell">
+    <header th:replace="~{fragments/layout :: topbar('Overview','Role workspace')}"></header>
+    <main class="content">
+        <div th:replace="~{fragments/layout :: flashes}"></div>
+        <section class="welcome-card">
+            <span class="eyebrow"><i></i><span>Circulation Desk Staff workspace</span></span>
+            <h2 th:text="'Good to see you, '+${currentUser.firstName}+'.'">Good to see you.</h2>
+            <p>Keep requests moving and every reader connected with their next book.</p>
+        </section>
+
+        <section class="stat-grid">
+            <article class="stat-card"><small>Catalogue titles</small><strong th:text="${bookCount}">0</strong><span>curated records</span></article>
+            <article class="stat-card" style="--card:#f8e9ce"><small>Copies available</small><strong th:text="${availableCount}">0</strong><span>ready to borrow</span></article>
+            <article class="stat-card"><small>Pending requests</small><strong th:text="${requestCount}">0</strong><span>live workflow</span></article>
+            <article class="stat-card" style="--card:#f2ded9"><small>Upcoming events</small><strong th:text="${eventCount}">0</strong><span>needs attention</span></article>
+        </section>
+
+        <section class="dashboard-grid">
+            <div class="panel">
+                <div class="panel-head"><h2>Recent circulation</h2><a th:href="@{/circulation}" class="muted">View all →</a></div>
+                <div class="table-wrap"><table class="data-table">
+                    <thead><tr><th>Title</th><th>Member</th><th>Status</th><th>Due</th></tr></thead>
+                    <tbody>
+                    <tr th:each="loan:${recentLoans}">
+                        <td class="title-cell"><img class="mini-cover" th:src="${loan.copy.book.coverUrl}" alt=""><span><b th:text="${loan.copy.book.title}">Title</b><br><small class="muted" th:text="${loan.copy.barcode}">Code</small></span></td>
+                        <td th:text="${loan.member.fullName}">Member</td>
+                        <td><span class="status" th:classappend="${#strings.toLowerCase(loan.status.name())}" th:text="${loan.status}">ACTIVE</span></td>
+                        <td th:text="${loan.dueAt==null?'—':#temporals.format(loan.dueAt,'dd MMM yyyy')}">—</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(recentLoans)}"><td colspan="4" class="empty-state"><strong>Nothing moving yet</strong>Circulation activity will appear here.</td></tr>
+                    </tbody>
+                </table></div>
+            </div>
+            <div class="panel">
+                <div class="panel-head"><h2>Notifications</h2><span class="status" th:text="${unreadCount}+' new'">0 new</span></div>
+                <div class="panel-body">
+                    <div class="notice-item" th:each="n:${notifications}" th:classappend="${n.read}?'read'">
+                        <i></i><div><h4 th:text="${n.title}">Notice</h4><p th:text="${n.message}">Message</p><time th:text="${#temporals.format(n.createdAt,'dd MMM · HH:mm')}">Now</time></div>
+                        <form th:if="${!n.read}" th:action="@{/notifications/{id}/read(id=${n.id})}" method="post"><button class="icon-btn" style="color:#668177" title="Mark read">✓</button></form>
+                    </div>
+                    <div th:if="${#lists.isEmpty(notifications)}" class="empty-state"><strong>All quiet</strong>No notifications yet.</div>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

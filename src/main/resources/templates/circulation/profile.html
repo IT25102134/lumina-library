@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Profile')}"></head>
+<body>
+<aside th:replace="~{circulation/fragments :: sidebar('profile')}"></aside>
+<div class="app-shell">
+    <header th:replace="~{fragments/layout :: topbar('My profile','Account settings')}"></header>
+    <main class="content">
+        <div th:replace="~{fragments/layout :: flashes}"></div>
+        <section class="panel form-panel">
+            <div class="panel-head">
+                <h2>Personal details</h2>
+                <span class="status active" th:text="${profile.role.displayName}">Circulation desk staff</span>
+            </div>
+            <form class="panel-body" th:action="@{/circulation/profile}" method="post" data-circulation-profile novalidate>
+                <div class="form-grid">
+                    <label class="field">First name
+                        <input id="circulation-first-name" name="firstName" th:value="${profile.firstName}"
+                               required maxlength="80" autocomplete="given-name"
+                               aria-describedby="circulation-first-name-error">
+                        <small class="circulation-field-error" id="circulation-first-name-error"
+                               aria-live="polite"></small>
+                    </label>
+                    <label class="field">Last name
+                        <input id="circulation-last-name" name="lastName" th:value="${profile.lastName}"
+                               required maxlength="80" autocomplete="family-name"
+                               aria-describedby="circulation-last-name-error">
+                        <small class="circulation-field-error" id="circulation-last-name-error"
+                               aria-live="polite"></small>
+                    </label>
+                    <label class="field">Login username (email)
+                        <input id="circulation-email" name="email" type="email" th:value="${profile.email}"
+                               required maxlength="180" autocomplete="email"
+                               aria-describedby="circulation-email-error">
+                        <small class="circulation-field-error" id="circulation-email-error"
+                               aria-live="polite"></small>
+                    </label>
+                    <label class="field">Phone
+                        <input id="circulation-phone" name="phone" type="tel" th:value="${profile.phone}"
+                               maxlength="30" inputmode="tel" autocomplete="tel" placeholder="+94 77 123 4567"
+                               aria-describedby="circulation-phone-error">
+                        <small class="circulation-field-error" id="circulation-phone-error"
+                               aria-live="polite"></small>
+                    </label>
+                    <label class="field">Member / staff number
+                        <span class="circulation-staff-number-field">
+                            <span class="circulation-staff-prefix">STAFF-</span>
+                            <input id="circulation-staff-number" name="staffNumberSuffix" type="text"
+                                   th:value="${#strings.startsWith(profile.membershipNumber, 'STAFF-') ? #strings.substring(profile.membershipNumber, 6) : ''}"
+                                   required minlength="3" maxlength="3" inputmode="numeric" autocomplete="off"
+                                   aria-label="Staff number digits"
+                                   aria-describedby="circulation-staff-number-error">
+                        </span>
+                        <small class="circulation-field-error" id="circulation-staff-number-error"
+                               aria-live="polite"></small>
+                    </label>
+                    <label class="field">Account created
+                        <input th:value="${#temporals.format(profile.createdAt,'dd MMMM yyyy')}" disabled>
+                    </label>
+                    <label class="field">New password (optional)
+                        <span class="password-field">
+                            <input id="new-password" name="password" type="password" minlength="8"
+                                   maxlength="72" autocomplete="new-password"
+                                   aria-describedby="circulation-password-error">
+                            <button class="password-toggle" type="button" data-password-toggle="new-password"
+                                    aria-label="Show password" aria-pressed="false">👁</button>
+                        </span>
+                        <small class="circulation-field-error" id="circulation-password-error"
+                               aria-live="polite"></small>
+                    </label>
+                    <label class="field">Confirm new password
+                        <span class="password-field">
+                            <input id="confirm-password" name="confirmPassword" type="password" minlength="8"
+                                   maxlength="72" autocomplete="new-password"
+                                   aria-describedby="circulation-confirm-password-error">
+                            <button class="password-toggle" type="button" data-password-toggle="confirm-password"
+                                    aria-label="Show password" aria-pressed="false">👁</button>
+                        </span>
+                        <small class="circulation-field-error" id="circulation-confirm-password-error"
+                               aria-live="polite"></small>
+                    </label>
+                </div>
+                <div class="form-footer"><button class="btn btn-amber">Save profile →</button></div>
+            </form>
+        </section>
+    </main>
+</div>
+<style>
+    .circulation-field-error{display:none;margin-top:6px;color:#943f39;font-size:10px;
+        font-weight:600;letter-spacing:0;text-transform:none;line-height:1.4}
+    .circulation-field-error.visible{display:block}
+    .field input.circulation-input-error{border-color:#b44d45;background:#fff8f7;
+        box-shadow:0 0 0 3px rgba(180,77,69,.12)}
+    .circulation-staff-number-field{display:flex;margin-top:7px}
+    .circulation-staff-prefix{display:flex;align-items:center;padding:0 0 0 15px;border:1px solid var(--line);
+        border-right:0;border-radius:4px 0 0 4px;background:#f3f4f1;color:var(--muted);font-size:13px;
+        letter-spacing:0;text-transform:none}
+    .circulation-staff-number-field input{margin-top:0;border-radius:0 4px 4px 0;border-left:0;padding-left:2px}
+</style>
+<script defer th:src="@{/js/circulation/profile-validation.js}"></script>
+</body>
+</html>
