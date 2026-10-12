@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<aside class="sidebar" th:fragment="sidebar(active)">
+    <a class="brand" th:href="@{/dashboard}">
+        <span class="brand-mark">L</span>
+        <span><b>Lumina</b><small>Public Library</small></span>
+    </a>
+    <nav class="nav-stack">
+        <a th:href="@{/dashboard}" th:classappend="${active=='dashboard'}?'active'">
+            <span>⌂</span>Overview
+        </a>
+        <a th:href="@{/circulation}" th:classappend="${active=='circulation'}?'active'">
+            <span>⇄</span>Review requests
+        </a>
+    </nav>
+    <div class="sidebar-user">
+        <div class="avatar" th:text="${#strings.substring(currentUser.firstName,0,1)}">N</div>
+        <div>
+            <b th:text="${currentUser.fullName}">Circulation staff</b>
+            <small th:text="${currentUser.role.displayName}">Circulation Desk Staff</small>
+        </div>
+        <form th:action="@{/logout}" method="post">
+            <button title="Sign out" class="icon-btn">↗</button>
+        </form>
+    </div>
+</aside>
+</body>
+</html>

@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Circulation')}"></head>
@@ -252,3 +253,39 @@
 </div>
 </body>
 </html>
+=======
+<!DOCTYPE html><html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Circulation')}"></head><body>
+<aside th:replace="~{circulation/fragments :: sidebar('circulation')}"></aside><div class="app-shell">
+<header th:replace="~{fragments/layout :: topbar('Circulation desk','Loans & returns')}"></header><main class="content">
+<div th:replace="~{fragments/layout :: flashes}"></div>
+<!-- CREATE: Circulation-only form; member registration and Inventory screens are unchanged. -->
+<section class="panel" style="margin-bottom:20px" id="new-loan">
+<div class="panel-head"><h2>New loan / Issue book</h2><a class="btn btn-outline btn-sm" href="#loan-history">Loan history</a></div>
+<div class="panel-body">
+<form th:action="@{/circulation/create}" method="post">
+<div class="form-grid">
+<div class="field"><label for="memberId">Registered member</label><select id="memberId" name="memberId" required><option value="">Select an active member</option><option th:each="member:${members}" th:value="${member.id}" th:text="${member.fullName}+' · '+${member.membershipNumber != null ? member.membershipNumber : member.email}">Member</option></select></div>
+<div class="field"><label for="copyId">Available book copy</label><select id="copyId" name="copyId" required><option value="">Select an available copy</option><option th:each="copy:${availableCopies}" th:value="${copy.id}" th:text="${copy.book.title}+' · '+${copy.barcode}">Book copy</option></select></div>
+</div>
+<p class="muted" style="margin:16px 0 0">Creates a loan and issues the selected copy immediately. Due in 14 days. Members with overdue books, unpaid fines, 3 open loans or the same title already borrowed cannot receive another issue.</p>
+<p class="muted" th:if="${#lists.isEmpty(members)}">No active registered members are available. Register or activate a member through User Management first.</p>
+<p class="muted" th:if="${#lists.isEmpty(availableCopies)}">No available copies are listed. Check the existing Inventory module.</p>
+<div class="form-footer"><button class="btn btn-amber" th:disabled="${#lists.isEmpty(members) or #lists.isEmpty(availableCopies)}">Create loan &amp; issue book</button></div>
+</form></div></section>
+<section class="panel" style="margin-bottom:20px"><div class="panel-head"><h2>Borrow requests</h2><span class="status requested" th:text="${#lists.size(requests)}+' waiting'">0 waiting</span></div>
+<div class="table-wrap"><table class="data-table"><thead><tr><th>Member</th><th>Book / copy</th><th>Requested</th><th>Eligibility</th><th>Action</th></tr></thead><tbody>
+<tr th:each="loan:${requests}"><td><b th:text="${loan.member.fullName}">Member</b><br><small class="muted" th:text="${loan.member.membershipNumber}">Number</small></td><td><b th:text="${loan.copy.book.title}">Book</b><br><small class="muted" th:text="${loan.copy.barcode}">Copy</small></td><td th:text="${#temporals.format(loan.requestedAt,'dd MMM · HH:mm')}">Date</td><td><span class="muted">Checked when issuing</span></td><td><div class="inline-form"><form th:action="@{/circulation/{id}/issue(id=${loan.id})}" method="post"><button class="btn btn-amber btn-sm">Issue</button></form><form th:action="@{/circulation/{id}/reject(id=${loan.id})}" method="post" data-confirm="Reject this request?"><button class="btn btn-outline btn-sm">Decline</button></form><form th:if="${!#lists.contains(fineLoanIds,loan.id)}" th:action="@{/circulation/{id}/delete(id=${loan.id})}" method="post" data-confirm="Delete this pending loan and release its reserved copy? This cannot be undone."><button class="btn btn-danger btn-sm">Delete</button></form></div></td></tr>
+<tr th:if="${#lists.isEmpty(requests)}"><td colspan="5" class="empty-state"><strong>Desk is clear</strong>No borrow requests are waiting.</td></tr></tbody></table></div></section>
+<section class="panel" style="margin-bottom:20px"><div class="panel-head"><h2>Books currently out</h2><span class="muted" th:text="${#lists.size(currentLoans)}+' active loans'">0</span></div>
+<div class="table-wrap"><table class="data-table"><thead><tr><th>Book</th><th>Member</th><th>Issued</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+<tr th:each="loan:${currentLoans}"><td><b th:text="${loan.copy.book.title}">Book</b><br><small class="muted" th:text="'Loan #'+${loan.id}+' · '+${loan.copy.barcode}">Copy</small></td><td th:text="${loan.member.fullName}">Member</td><td th:text="${#temporals.format(loan.issuedAt,'dd MMM')}">Date</td><td th:text="${#temporals.format(loan.dueAt,'dd MMM yyyy · HH:mm')}">Due</td><td><span class="status" th:classappend="${#strings.toLowerCase(loan.status.name())}" th:text="${loan.status}">Status</span></td><td><div class="inline-form"><a class="btn btn-outline btn-sm" th:href="@{/circulation/{id}/edit(id=${loan.id})}">Edit</a><form th:if="${loan.status.name() == 'ACTIVE' and loan.renewalCount == 0 and loan.dueAt != null}" th:action="@{/circulation/{id}/renew(id=${loan.id})}" method="post"><button class="btn btn-outline btn-sm">Renew +7 days</button></form><form th:action="@{/circulation/{id}/return(id=${loan.id})}" method="post"><button class="btn btn-ink btn-sm">Check in</button></form></div></td></tr>
+<tr th:if="${#lists.isEmpty(currentLoans)}"><td colspan="6" class="empty-state"><strong>No active loans</strong>Issued books will appear here.</td></tr></tbody></table></div></section>
+<!-- READ/DELETE: closed records stay visible; financial references prevent deletion. -->
+<section class="panel" id="loan-history"><div class="panel-head"><h2>Loan history</h2><span class="muted" th:text="${#lists.size(history)}+' completed records'">0 records</span></div>
+<div class="table-wrap"><table class="data-table"><thead><tr><th>Loan / book</th><th>Member</th><th>Requested</th><th>Returned</th><th>Status</th><th>Action</th></tr></thead><tbody>
+<tr th:each="loan:${history}"><td><b th:text="${loan.copy.book.title}">Book</b><br><small class="muted" th:text="'Loan #'+${loan.id}+' · '+${loan.copy.barcode}">Copy</small></td><td th:text="${loan.member.fullName}">Member</td><td th:text="${#temporals.format(loan.requestedAt,'dd MMM yyyy')}">Date</td><td th:text="${loan.returnedAt != null ? #temporals.format(loan.returnedAt,'dd MMM yyyy · HH:mm') : '—'}">Date</td><td><span class="status" th:classappend="${#strings.toLowerCase(loan.status.name())}" th:text="${loan.status}">Status</span></td><td><form th:if="${!#lists.contains(fineLoanIds,loan.id)}" th:action="@{/circulation/{id}/delete(id=${loan.id})}" method="post" data-confirm="Permanently delete this closed loan? Its audit entry will remain. This cannot be undone."><button class="btn btn-danger btn-sm">Delete</button></form><small class="muted" th:if="${#lists.contains(fineLoanIds,loan.id)}">Fine/payment record linked</small></td></tr>
+<tr th:if="${#lists.isEmpty(history)}"><td colspan="6" class="empty-state"><strong>No completed loans yet</strong>Returned books and declined requests appear here.</td></tr>
+</tbody></table></div></section>
+</main></div></body></html>
+>>>>>>> Stashed changes
