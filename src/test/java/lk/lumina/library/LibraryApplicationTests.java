@@ -28,6 +28,7 @@ class LibraryApplicationTests {
         mvc.perform(get("/dashboard")).andExpect(status().is3xxRedirection());
     }
 
+    // Verifies that a Head Librarian can view and manage the catalogue while unrelated role workspaces remain inaccessible.
     @Test @WithMockUser(username="head@lumina.lk",roles="HEAD_LIBRARIAN")
     void headLibrarianOnlyHasCatalogueManagement() throws Exception {
         mvc.perform(get("/dashboard")).andExpect(status().isOk());

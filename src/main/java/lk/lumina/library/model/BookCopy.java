@@ -6,10 +6,13 @@ import java.time.LocalDate;
 
 @Entity @Table(name = "book_copies")
 public class BookCopy {
+    // Each physical copy belongs to one Book catalogue record through book_id.
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
     @ManyToOne(optional = false) @JoinColumn(name = "book_id") private Book book;
+    // Inventory data identifies the copy and where it is stored.
     @NotBlank @Column(nullable = false, unique = true, length = 50) private String barcode;
     @Column(nullable = false, length = 60) private String shelfLocation;
+    // CatalogController counts copies with AVAILABLE status to build each title's availability badge.
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) private BookCopyStatus status = BookCopyStatus.AVAILABLE;
     private LocalDate acquiredDate = LocalDate.now();
     public BookCopy() {}

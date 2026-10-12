@@ -37,6 +37,7 @@ public class SecurityConfig {
     @Bean SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/login", "/register", "/css/**", "/js/**", "/images/**", "/error").permitAll()
+                        // Catalogue-management URLs are protected at the HTTP layer so only Head Librarians can create, edit, save, or delete records.
                         .requestMatchers("/catalog/manage/**").hasRole("HEAD_LIBRARIAN")
                         .requestMatchers("/inventory/**").hasRole("LIBRARY_ASSISTANT")
                         .requestMatchers("/circulation/**").hasAnyRole("CIRCULATION_STAFF","HEAD_LIBRARIAN")

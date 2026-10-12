@@ -20,6 +20,7 @@ public class HomeController {
         this.books=books;this.copies=copies;this.loans=loans;this.events=events;this.feedback=feedback;this.users=users;this.notifications=notifications;this.current=current;
     }
     @GetMapping("/") String home(Model model){
+        // Reuses active catalogue records for the public landing page and limits the featured collection to four titles.
         List<Book> featured=books.findByActiveTrueOrderByTitleAsc();
         model.addAttribute("featured",featured.stream().limit(4).toList());
         LocalDate today=LocalDate.now();
@@ -42,6 +43,7 @@ public class HomeController {
     @GetMapping("/access-denied") String denied(){return "access-denied";}
     @GetMapping("/dashboard") String dashboard(Model model){
         UserAccount u=current.get();
+        // Supplies the dashboard's catalogue-title and available-copy statistic cards.
         model.addAttribute("bookCount",books.count()); model.addAttribute("availableCount",copies.countByStatus(BookCopyStatus.AVAILABLE));
         model.addAttribute("activeLoanCount",loans.countByStatus(LoanStatus.ACTIVE)); model.addAttribute("requestCount",loans.countByStatus(LoanStatus.REQUESTED));
         model.addAttribute("memberCount",users.findByRole(Role.MEMBER).size());

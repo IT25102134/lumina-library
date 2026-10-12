@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     });
   }
   document.querySelectorAll('.flash').forEach(el=>setTimeout(()=>{el.style.opacity='0';el.style.transform='translateY(-5px)';setTimeout(()=>el.remove(),250)},4500));
+  // The catalogue Delete form uses data-confirm; cancelling this browser prompt prevents its POST request.
   document.querySelectorAll('form[data-confirm]').forEach(form=>form.addEventListener('submit',e=>{if(!confirm(form.dataset.confirm))e.preventDefault()}));
 
 });
