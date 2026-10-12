@@ -4,14 +4,14 @@ CREATE TABLE user_accounts (
     active BIT NOT NULL DEFAULT 1, membership_number NVARCHAR(30) NULL UNIQUE, phone NVARCHAR(30) NULL,
     created_at DATETIME2 NOT NULL
 );
--- Stores one bibliographic row per catalogue title, including display links and the active flag used for soft deletion.
+
 CREATE TABLE books (
     id BIGINT IDENTITY(1,1) PRIMARY KEY, isbn NVARCHAR(20) NOT NULL UNIQUE, title NVARCHAR(220) NOT NULL,
     author NVARCHAR(160) NOT NULL, category NVARCHAR(100) NOT NULL, publisher NVARCHAR(160) NULL,
     publication_year INT NULL, description NVARCHAR(2000) NULL, cover_url NVARCHAR(500) NULL,
     ebook_url NVARCHAR(500) NULL, active BIT NOT NULL DEFAULT 1, created_at DATETIME2 NOT NULL
 );
--- Stores physical copies linked to catalogue titles; copy status is the source of the availability badge count.
+
 CREATE TABLE book_copies (
     id BIGINT IDENTITY(1,1) PRIMARY KEY, book_id BIGINT NOT NULL REFERENCES books(id),
     barcode NVARCHAR(50) NOT NULL UNIQUE, shelf_location NVARCHAR(60) NOT NULL,
