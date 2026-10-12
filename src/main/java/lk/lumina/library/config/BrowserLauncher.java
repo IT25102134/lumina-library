@@ -15,7 +15,7 @@ public class BrowserLauncher {
     public void launch(ApplicationReadyEvent event) {
         if (!openBrowser) return;
         int port = event.getApplicationContext() instanceof WebServerApplicationContext context
-            ? context.getWebServer().getPort() : 8081;
+            ? context.getWebServer().getPort() : 8090;
         String url = "http://localhost:" + port;
         try {
             if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {

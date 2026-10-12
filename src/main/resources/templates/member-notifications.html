@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Notifications')}"></head>
+<body>
+<aside th:replace="~{fragments/layout :: sidebar('my-library')}"></aside>
+<div class="app-shell">
+<header th:replace="~{fragments/layout :: topbar('Notifications', 'Member services')}"></header>
+<main class="content">
+<div th:replace="~{fragments/layout :: flashes}"></div>
+
+<!-- Member Sub-navigation Bar -->
+<nav th:replace="~{fragments/member-nav :: tabs('notifications')}"></nav>
+
+<section class="panel" style="border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,0.03);overflow:hidden">
+    <div class="panel-head" style="padding:18px 24px;border-bottom:1px solid var(--border,rgba(7,27,34,0.08));display:flex;justify-content:space-between;align-items:center">
+        <h2 style="font-size:18px;margin:0">My notifications</h2>
+        <form th:action="@{/my-library/notifications/read-all}" method="post">
+            <button class="btn btn-outline btn-sm" type="submit">&#10003; Mark all as read</button>
+        </form>
+    </div>
+    <div class="panel-body stack" style="padding:16px 24px">
+        <div th:each="n : ${notifs}" class="notice-item" th:classappend="${!n.read} ? 'unread-notice'"
+             style="display:flex;align-items:flex-start;gap:16px;padding:14px;border-radius:10px;margin-bottom:8px;background:var(--paper,#f6f3eb)">
+            <div style="font-size:22px;line-height:1">&#128276;</div>
+            <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                    <b th:text="${n.title}" style="font-size:15px;font-weight:700">Title</b>
+                    <span th:if="${!n.read}" style="background:var(--amber,#f59e0b);color:#fff;border-radius:50px;padding:1px 8px;font-size:10px;font-weight:700">NEW</span>
+                    <small class="muted" th:text="${#temporals.format(n.createdAt,'dd MMM yyyy HH:mm')}" style="margin-left:auto;font-size:12px">Time</small>
+                </div>
+                <p th:text="${n.message}" style="margin:0;font-size:13px;color:var(--ink,#071b22)">Message</p>
+            </div>
+            <form th:if="${!n.read}" th:action="@{/my-library/notifications/{id}/read(id=${n.id})}" method="post" style="flex-shrink:0">
+                <button class="btn btn-outline btn-sm" type="submit">Mark read</button>
+            </form>
+        </div>
+        <div th:if="${#lists.isEmpty(notifs)}" class="empty-state" style="padding:40px 20px;text-align:center">
+            <div style="font-size:32px;margin-bottom:8px">&#127881;</div>
+            <strong style="font-size:15px;display:block">All caught up!</strong>
+            <span class="muted" style="font-size:13px">No notifications or reminders for your account right now.</span>
+        </div>
+    </div>
+</section>
+
+<div style="margin-top:16px">
+    <a class="btn btn-outline" th:href="@{/my-library}">&larr; Back to My Library</a>
+</div>
+
+</main>
+</div>
+</body>
+</html>

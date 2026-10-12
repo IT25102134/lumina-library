@@ -1,0 +1,48 @@
+@startuml
+title Catalog Management — Sequence Diagram
+skinparam monochrome true
+skinparam shadowing false
+actor "Head Librarian" as L
+boundary ":CatalogUI" as UI
+control ":CatalogController" as C
+database ":BookRepository" as DB
+control ":AuditService" as A
+note over L,A : Precondition: Head Librarian is signed in. Successful operations shown.
+loop For each catalog management request
+alt Add book
+L -> UI : Enter new book details
+UI -> C : save(bookDetails)
+activate C
+C -> DB : save(new active Book)
+DB --> C : savedBook
+else Edit book
+L -> UI : Select book to edit
+UI -> C : edit(bookId)
+C -> DB : findById(bookId)
+DB --> C : book
+C --> UI : Display populated book form
+L -> UI : Submit updated details
+UI -> C : save(bookDetails)
+C -> DB : findById(bookId)
+DB --> C : existingBook
+C -> DB : save(updated active Book)
+DB --> C : savedBook
+else Archive book
+L -> UI : Confirm archive(bookId)
+UI -> C : delete(bookId)
+C -> DB : findById(bookId)
+DB --> C : book
+C -> C : setActive(false)
+C -> DB : save(archived Book)
+DB --> C : savedBook
+end
+C -> A : record(CREATE / UPDATE / ARCHIVE)
+activate A
+A --> C : completed
+deactivate A
+C --> UI : Redirect to /catalog + success message
+deactivate C
+UI --> L : Show refreshed catalog and confirmation
+end
+note over DB,A : Repository abstracts persistence. AuditService persists the audit log.
+@enduml

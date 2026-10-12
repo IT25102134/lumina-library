@@ -1,1 +1,229 @@
-<!DOCTYPE html><html lang="en" xmlns:th="http://www.thymeleaf.org"><head th:replace="~{fragments/layout :: head('Feedback cases')}"></head><body><aside th:replace="~{fragments/layout :: sidebar('feedback-manage')}"></aside><div class="app-shell"><header th:replace="~{fragments/layout :: topbar('Feedback & complaints','Case management')}"></header><main class="content"><div th:replace="~{fragments/layout :: flashes}"></div><section class="stack"><article class="panel case-card" th:each="item:${items}"><header><div><span class="pill" th:text="${item.type}">TYPE</span><h3 th:text="${item.subject}">Subject</h3><small class="muted" th:text="${item.member.fullName}+' · #'+${item.id}+' · '+${#temporals.format(item.createdAt,'dd MMM yyyy HH:mm')}">Member</small></div><span class="status" th:classappend="${#strings.toLowerCase(item.status.name())}" th:text="${item.status}">OPEN</span></header><p class="message" th:text="${item.message}">Message</p><form class="inline-form" th:action="@{/feedback/manage/{id}(id=${item.id})}" method="post"><select name="status"><option th:each="s:${statuses}" th:value="${s}" th:text="${s}" th:selected="${s==item.status}"></option></select><textarea name="response" required placeholder="Write a clear, helpful response…" th:text="${item.response}"></textarea><button class="btn btn-amber btn-sm">Update case</button></form></article><div th:if="${#lists.isEmpty(items)}" class="panel empty-state"><strong>Inbox zero</strong>No feedback cases require review.</div></section></main></div></body></html>
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Feedback cases')}"></head>
+
+<style>
+    /* Feedback queue: compact, visually distinct, expandable cases */
+    .feedback-case-summary:hover{background:var(--cream)}
+    .feedback-accordion.case-complaint{border-left-color:var(--amber)}
+    .feedback-case-details{background:var(--white)}
+    .feedback-accordion .case-type{font-size:11px;padding:6px 11px}
+    .feedback-accordion .case-subject{font-size:19px}
+    .feedback-accordion .feedback-reply-form textarea{min-height:88px}
+    .feedback-accordion .feedback-status-form{padding:12px 0;display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+    .feedback-accordion .feedback-status-form select{min-width:115px}
+    .feedback-accordion .feedback-reply-form{display:flex;align-items:flex-start;flex-wrap:wrap;gap:8px}
+    .feedback-accordion .feedback-reply-form textarea{flex:1 1 270px}
+    .feedback-accordion .feedback-reply-form button{align-self:flex-end}
+
+    .feedback-case-list{gap:12px}
+    .feedback-accordion{display:block;margin:0;padding:0;border:1px solid var(--line);border-left:5px solid var(--amber);border-radius:9px;background:var(--white);overflow:hidden;box-shadow:0 3px 12px rgba(15,35,35,.045)}
+    .feedback-accordion.case-feedback{border-left-color:var(--teal)}
+    .feedback-accordion.case-suggestion{border-left-color:var(--sage)}
+    .feedback-accordion[open]{box-shadow:0 10px 24px rgba(15,35,35,.085);border-color:var(--sage)}
+    .feedback-case-summary{display:flex;justify-content:space-between;gap:18px;align-items:start;padding:17px 20px;cursor:pointer;list-style:none}
+    .feedback-case-summary::-webkit-details-marker{display:none}
+    .feedback-case-summary:focus-visible{outline:3px solid var(--amber);outline-offset:-3px}
+    .case-summary-info{display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-width:0}
+    .case-ref,.case-member,.case-summary-side{font-size:11px;color:var(--muted)}
+    .case-subject{font:600 19px Georgia,serif;color:var(--ink);overflow-wrap:anywhere}
+    .case-summary-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+    .case-type{border-radius:20px;padding:5px 10px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--cream);color:var(--ink-2)}
+    .case-feedback .case-type{background:#e7efe9;color:var(--teal)}
+    .case-suggestion .case-type{background:#e7efe9;color:var(--ink-2)}
+    .case-summary-side{display:flex;flex-direction:column;align-items:flex-end;white-space:nowrap;gap:16px}
+    .case-expand-label{color:var(--teal);font-size:11px;font-weight:700}
+    .case-expand-label span{display:inline-block;transition:transform .2s}
+    .feedback-accordion[open] .case-expand-label span{transform:rotate(180deg)}
+    .feedback-case-details{border-top:1px solid var(--line);padding:17px 20px 20px}
+    .feedback-case-details .message{margin-top:0}
+    .feedback-reply-form{margin-top:18px}
+    .feedback-status-form{margin-top:10px}
+    @media(max-width:650px){.feedback-case-summary{padding:14px;flex-direction:column}.case-summary-side{align-items:flex-start;gap:4px}.feedback-case-details{padding:14px}}
+
+    /* Clear distinction between complaint / feedback / suggestions; no external CSS edits */
+    .feedback-accordion{transition:box-shadow .15s,border-color .15s}
+    .feedback-accordion.case-complaint{border-left:6px solid var(--amber)}
+    .feedback-accordion.case-feedback{border-left:6px solid var(--teal)}
+    .feedback-accordion.case-suggestion{border-left:6px solid var(--sage)}
+    .case-type{border:1px solid transparent}
+    .case-complaint .case-type{background:var(--cream);color:var(--ink-2);border-color:var(--amber-2)}
+    .case-feedback .case-type{background:#e7efe9;color:var(--teal);border-color:var(--sage)}
+    .case-suggestion .case-type{background:#e7efe9;color:var(--ink-2);border-color:var(--sage)}
+    .case-type-label{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2)}
+    .case-feedback .case-type-label{color:var(--teal)}
+    .case-suggestion .case-type-label{color:var(--teal)}
+    .feedback-case-summary{align-items:center}
+    .feedback-case-details .message{border-radius:8px;padding:13px 15px}
+    .feedback-workflow-title{font-size:12px;font-weight:800;color:var(--muted);margin:15px 0 7px}
+    .feedback-status-form{padding:12px!important;background:var(--paper);border:1px solid var(--line);border-radius:10px}
+    .feedback-status-form button,.feedback-reply-form button{min-height:40px}
+    .feedback-case-details form select{max-width:100%}
+    @media(max-width:650px){.feedback-reply-form button{width:100%}}
+</style>
+<body>
+<aside th:replace="~{fragments/layout :: sidebar('feedback-manage')}"></aside>
+<div class="app-shell">
+    <header th:replace="~{fragments/layout :: topbar('Feedback cases','Library manager')}"></header>
+    <main class="content">
+        <div th:replace="~{fragments/layout :: flashes}"></div>
+
+        <section class="stat-grid">
+            <article class="stat-card"><small>Active cases</small><strong th:text="${stats.activeCases()}">0</strong><span>not archived</span></article>
+            <article class="stat-card"><small>Open</small><strong th:text="${stats.openCases()}">0</strong><span>awaiting review</span></article>
+            <article class="stat-card"><small>In review</small><strong th:text="${stats.inReviewCases()}">0</strong><span>being handled</span></article>
+            <article class="stat-card" style="--card:#f2ded9"><small>Complaints</small><strong th:text="${stats.complaintCases()}">0</strong><span>active complaints</span></article>
+        </section>
+
+        <section class="panel" style="margin-bottom:24px">
+            <div class="panel-head"><h2>Search and filter</h2></div>
+            <div class="panel-body">
+                <form th:action="@{/feedback/manage}" method="get" class="feedback-filter-form">
+                    <div class="inline-form">
+                        <input type="search" name="keyword" placeholder="Reference, subject, message, member…" th:value="${keyword}"/>
+                        <select name="type">
+                            <option value="">All types</option>
+                            <option th:each="t : ${types}" th:value="${t}" th:text="${t.displayName}" th:selected="${selectedType == t}"></option>
+                        </select>
+                        <select name="status">
+                            <option value="">All statuses</option>
+                            <option th:each="s : ${statuses}" th:value="${s}" th:text="${s.displayName}" th:selected="${selectedStatus == s}"></option>
+                        </select>
+                        <select name="priority">
+                            <option value="">All priorities</option>
+                            <option th:each="p : ${priorities}" th:value="${p}" th:text="${p.displayName}" th:selected="${selectedPriority == p}"></option>
+                        </select>
+                        <button type="submit" class="btn btn-amber btn-sm">Apply</button>
+                        <a th:href="@{/feedback/manage}" class="btn btn-outline btn-sm">Clear</a>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-head">
+                <h2>Case queue</h2>
+                <span class="status" th:text="${#lists.size(items)} + ' shown'">0 shown</span>
+            </div>
+            <div class="panel-body stack feedback-case-list">
+                <details class="case-card feedback-case feedback-accordion" th:each="item : ${items}"
+                         th:classappend="${' case-' + #strings.toLowerCase(item.type.name())}">
+                    <summary class="feedback-case-summary">
+                        <span class="case-summary-info">
+                            <span class="case-ref" th:text="${item.referenceNumber}">FCM-2026-ABCDEFGH</span>
+                            <span class="case-type-label" th:text="${item.type.name() == 'COMPLAINT' ? 'Reported issue' : (item.type.name() == 'FEEDBACK' ? 'Member feedback' : 'Improvement suggestion')}">Reported issue</span>
+                            <strong class="case-subject" th:text="${item.subject}">Subject</strong>
+                            <span class="case-summary-meta">
+                                <span class="case-type" th:text="${item.type.displayName}">Complaint</span>
+                                <span class="status" th:classappend="${#strings.toLowerCase(item.status.name())}" th:text="${item.status.displayName}">Open</span>
+                                <span class="pill" th:text="${item.priority.displayName}">Medium</span>
+                            </span>
+                            <span class="case-member" th:text="${item.member.fullName + ' · ' + item.member.email}">Member</span>
+                        </span>
+                        <span class="case-summary-side">
+                            <time th:text="${#temporals.format(item.createdAt,'dd MMM yyyy HH:mm')}">Date</time>
+                            <span class="case-expand-label">View details <span aria-hidden="true">⌄</span></span>
+                        </span>
+                    </summary>
+                    <div class="feedback-case-details">
+                        <div class="message" th:text="${item.message}">Message</div>
+
+                        <div class="feedback-thread" th:if="${item.response != null and !#strings.isEmpty(item.response)}">
+                            <h4>Earlier manager response</h4>
+                            <div class="thread-item">
+                                <p th:text="${item.response}">Legacy response</p>
+                            </div>
+                        </div>
+
+                        <div class="feedback-thread" th:if="${!#lists.isEmpty(replies[item.id])}">
+                            <h4>Conversation</h4>
+                            <div class="thread-item" th:each="reply : ${replies[item.id]}">
+                                <strong th:text="${reply.author.fullName}">Author</strong>
+                                <small class="muted" th:text="${#temporals.format(reply.createdAt,'dd MMM yyyy HH:mm')}">Time</small>
+                                <p th:text="${reply.message}">Reply</p>
+                            </div>
+                        </div>
+
+                        <div class="feedback-workflow-title" th:if="${item.status.repliesAllowed}">Reply and update case</div>
+                        <form th:if="${item.status.repliesAllowed}"
+                              th:action="@{/feedback/manage/{id}/reply(id=${item.id})}" method="post" class="inline-form feedback-reply-form" onsubmit="return syncFeedbackReplySelections(this)">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                            <input type="hidden" name="filterType" th:value="${selectedType}"/>
+                            <input type="hidden" name="filterStatus" th:value="${selectedStatus}"/>
+                            <input type="hidden" name="filterPriority" th:value="${selectedPriority}"/>
+                            <input type="hidden" name="filterKeyword" th:value="${keyword}"/>
+                            <textarea name="message" rows="2" placeholder="Reply to the member" required
+                                      th:text="${retryCaseId != null and retryCaseId == item.id ? retryMessage : ''}"></textarea>
+                            <p class="feedback-retry-hint"
+                               th:if="${error != null and retryCaseId != null and retryCaseId == item.id}">
+                                Correct the reply and send it again.
+                            </p>
+                            <input type="hidden" name="status" class="reply-selected-status" th:value="${item.status}"/>
+                            <input type="hidden" name="priority" class="reply-selected-priority" th:value="${item.priority}"/>
+                            <!-- Original visible dropdowns in the separate update form below are shared. -->
+                            <button type="submit" class="btn btn-amber btn-sm">Send reply &amp; update</button>
+                        </form>
+
+                        <div class="feedback-workflow-title" th:if="${item.status.name() != 'WITHDRAWN'}">Status and priority (shared with reply above)</div>
+                        <form th:if="${item.status.name() != 'WITHDRAWN'}"
+                              th:action="@{/feedback/manage/{id}/status(id=${item.id})}" method="post" class="inline-form feedback-status-form">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                            <input type="hidden" name="filterType" th:value="${selectedType}"/>
+                            <input type="hidden" name="filterStatus" th:value="${selectedStatus}"/>
+                            <input type="hidden" name="filterPriority" th:value="${selectedPriority}"/>
+                            <input type="hidden" name="filterKeyword" th:value="${keyword}"/>
+                            <select name="status" class="shared-case-status" required aria-label="Case status">
+                                <option th:each="s : ${managerStatuses}"
+                                        th:if="${item.status.canManagerTransitionTo(s)}"
+                                        th:value="${s}" th:text="${s.displayName}" th:selected="${s == item.status}"></option>
+                            </select>
+                            <select name="priority" class="shared-case-priority" required aria-label="Case priority">
+                                <option th:each="p : ${priorities}" th:value="${p}" th:text="${p.displayName}" th:selected="${p == item.priority}"></option>
+                            </select>
+                            <button type="submit" class="btn btn-outline btn-sm">Update status &amp; priority</button>
+                        </form>
+
+                        <form th:if="${item.status.name() == 'CLOSED' or item.status.name() == 'WITHDRAWN'}"
+                              th:action="@{/feedback/manage/{id}/archive(id=${item.id})}" method="post" class="inline-form">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                            <input type="hidden" name="filterType" th:value="${selectedType}"/>
+                            <input type="hidden" name="filterStatus" th:value="${selectedStatus}"/>
+                            <input type="hidden" name="filterPriority" th:value="${selectedPriority}"/>
+                            <input type="hidden" name="filterKeyword" th:value="${keyword}"/>
+                            <button type="submit" class="btn btn-outline btn-sm">Archive case</button>
+                        </form>
+                    </div>
+                </details>
+
+                <div th:if="${#lists.isEmpty(items)}" class="empty-state">
+                    <strong>No matching cases</strong>
+                    Adjust your filters or wait for new member submissions.
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+    function syncFeedbackReplySelections(replyForm) {
+        const caseCard = replyForm.closest('.feedback-case');
+        const status = caseCard?.querySelector('.shared-case-status');
+        const priority = caseCard?.querySelector('.shared-case-priority');
+        if (!status || !priority || !status.value || !priority.value) {
+            alert('Please select a status and priority.');
+            return false;
+        }
+        replyForm.querySelector('.reply-selected-status').value = status.value;
+        replyForm.querySelector('.reply-selected-priority').value = priority.value;
+        return true;
+    }
+    // If server redirects back with an invalid reply, expand that case to show its error.
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.feedback-retry-hint').forEach(function (hint) {
+            const caseCard = hint.closest('details.feedback-case');
+            if (caseCard) caseCard.open = true;
+        });
+    });
+</script>
+</body>
+</html>
