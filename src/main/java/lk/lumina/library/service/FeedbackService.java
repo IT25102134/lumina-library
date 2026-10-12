@@ -95,6 +95,16 @@ public class FeedbackService {
 
         item.setMember(member);
         copyForm(item, form);
+
+        // Strategy Pattern - Calculate automatic initial priority
+        FeedbackPriority priority =
+                FeedbackPriorityStrategy.calculatePriority(
+                        item.getType(),
+                        item.getCategory()
+                );
+
+        item.setPriority(priority);
+
         item = feedbackRepository.save(item);
 
         // Notify managers and record the submission for audit.
