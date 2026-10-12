@@ -89,7 +89,11 @@
                 </div>
                 <small class="muted" style="font-size:11px" th:text="'Added on ' + ${#temporals.format(item.createdAt,'dd MMM yyyy')}">Date</small>
             </div>
-            <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+            <div style="display:flex;gap:8px;align-items:center;flex-shrink:0;flex-wrap:wrap">
+                <a th:if="${item.book.ebookUrl != null and !#strings.isEmpty(item.book.ebookUrl)}"
+                   th:href="${item.book.ebookUrl}" target="_blank" rel="noopener noreferrer"
+                   class="btn btn-outline btn-sm" style="color:#0284c7;border-color:#bae6fd;background:#f0f9ff"
+                   title="Open digital e-book">&#128214; E-Book</a>
                 <a th:href="@{/my-library/reading-list/{id}/edit(id=${item.id})}" class="btn btn-outline btn-sm">Edit goal</a>
                 <form th:action="@{/my-library/reading-list/{id}/delete(id=${item.id})}" method="post"
                       data-confirm="Remove this book from your reading list?">

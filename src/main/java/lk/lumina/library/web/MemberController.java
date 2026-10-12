@@ -91,11 +91,21 @@ public class MemberController {
 
         long unreadCount = memberNotifs.stream().filter(n -> !n.isRead()).count();
 
+        // Reading Goal Challenge calculations (Academic Demo Feature)
+        long completedBooksCount = memberReading.stream()
+                .filter(i -> i.getStatus() == ReadingStatus.COMPLETED)
+                .count();
+        int annualGoal = 12; // Standard 12 books annual reading challenge
+        int goalProgressPct = Math.min(100, (int) Math.round((double) completedBooksCount * 100.0 / annualGoal));
+
         model.addAttribute("activeTab", "dashboard");
         model.addAttribute("member", u);
         model.addAttribute("loans", memberLoans);
         model.addAttribute("readingList", memberReading);
         model.addAttribute("savedCount", memberReading.size());
+        model.addAttribute("completedBooksCount", completedBooksCount);
+        model.addAttribute("annualGoal", annualGoal);
+        model.addAttribute("goalProgressPct", goalProgressPct);
         model.addAttribute("fines", memberFines);
         model.addAttribute("unpaidTotal", unpaidTotal);
         model.addAttribute("notifications", memberNotifs);
@@ -263,6 +273,56 @@ public class MemberController {
         audit.record(u.getEmail(), "RENEW", "Loan", id, loan.getCopy().getBook().getTitle());
         flash.addFlashAttribute("success", "Loan renewed for 7 more days. New due date: " + loan.getDueAt().toLocalDate() + ".");
         return "redirect:/my-library";
+    }
+
+    /**
+     * Download an iCalendar (.ics) event reminder for this active loan's due date.
+     * Imports into Google Calendar, Outlook, Apple Calendar with a 1-day advance alarm.
+     */
+    @GetMapping("/loans/{id}/calendar")
+    public void exportLoanCalendar(@PathVariable Long id, HttpServletResponse response) throws IOException {
+        UserAccount u = current.get();
+        Loan loan = loans.findById(id).orElseThrow(() -> new IllegalArgumentException("Loan record not found."));
+        if (!loan.getMember().getId().equals(u.getId())) {
+            throw new IllegalArgumentException("Unauthorized: Loan belongs to another member.");
+        }
+        if (loan.getDueAt() == null) {
+            response.sendRedirect("/my-library");
+            return;
+        }
+
+        String bookTitle = loan.getCopy() != null && loan.getCopy().getBook() != null ? loan.getCopy().getBook().getTitle() : "Library Book";
+        String barcode = loan.getCopy() != null ? loan.getCopy().getBarcode() : "N/A";
+
+        response.setContentType("text/calendar; charset=UTF-8");
+        response.setHeader("Content-Disposition", "attachment; filename=\"loan-due-reminder-" + id + ".ics\"");
+
+        java.time.format.DateTimeFormatter dtFormat = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss");
+        String startStr = loan.getDueAt().format(dtFormat);
+        String endStr = loan.getDueAt().plusHours(1).format(dtFormat);
+        String nowStr = LocalDateTime.now().format(dtFormat);
+
+        PrintWriter writer = response.getWriter();
+        writer.println("BEGIN:VCALENDAR");
+        writer.println("VERSION:2.0");
+        writer.println("PRODID:-//Lumina Public Library//Member Loan Reminder//EN");
+        writer.println("BEGIN:VEVENT");
+        writer.println("UID:loan-" + id + "@lumina.lk");
+        writer.println("DTSTAMP:" + nowStr);
+        writer.println("DTSTART:" + startStr);
+        writer.println("DTEND:" + endStr);
+        writer.println("SUMMARY:Return Due: " + bookTitle + " (Lumina Library)");
+        writer.println("DESCRIPTION:Reminder to return or renew '" + bookTitle + "' (Barcode: " + barcode + ") to Lumina Public Library Circulation Desk to avoid late fines.");
+        writer.println("LOCATION:Lumina Public Library Circulation Desk");
+        writer.println("STATUS:CONFIRMED");
+        writer.println("BEGIN:VALARM");
+        writer.println("TRIGGER:-P1D");
+        writer.println("ACTION:DISPLAY");
+        writer.println("DESCRIPTION:Reminder: Your library book is due tomorrow!");
+        writer.println("END:VALARM");
+        writer.println("END:VEVENT");
+        writer.println("END:VCALENDAR");
+        writer.flush();
     }
 
     // =========================================================================
@@ -644,6 +704,30 @@ public class MemberController {
         audit.record(u.getEmail(), "PAY_FINE", "FinePayment", id, f.getReference());
         flash.addFlashAttribute("success", "Demo payment recorded successfully. Reference: " + f.getReference() + ".");
         return "redirect:/my-library";
+    }
+
+    /**
+     * View official printable payment receipt voucher for a paid fine.
+     */
+    @GetMapping("/fines/{id}/receipt")
+    public String fineReceipt(@PathVariable Long id, Model model) {
+        UserAccount u = current.get();
+        FinePayment f = fines.findById(id).orElseThrow(() -> new IllegalArgumentException("Fine record not found."));
+        if (!f.getMember().getId().equals(u.getId())) {
+            throw new IllegalArgumentException("Unauthorized: Fine belongs to another member.");
+        }
+        long unreadCount = notifications.findTop8ByRecipientIdOrderByCreatedAtDesc(u.getId()).stream().filter(n -> !n.isRead()).count();
+        long savedCount = reading.findByMemberIdOrderByCreatedAtDesc(u.getId()).size();
+
+        model.addAttribute("activeTab", "dashboard");
+        model.addAttribute("member", u);
+        model.addAttribute("savedCount", savedCount);
+        model.addAttribute("unreadNotifsCount", unreadCount);
+        model.addAttribute("fine", f);
+        model.addAttribute("loan", f.getLoan());
+        model.addAttribute("book", f.getLoan() != null && f.getLoan().getCopy() != null ? f.getLoan().getCopy().getBook() : null);
+        model.addAttribute("receiptNo", "RCP-" + LocalDateTime.now().getYear() + "-" + String.format("%05d", f.getId()));
+        return "fine-receipt";
     }
 
     // =========================================================================
